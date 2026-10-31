@@ -54,11 +54,27 @@ description: 本书主要术语的中英文名称、简明定义和例子，按�
 | <span id="g-图像预处理"></span>图像预处理 | Image Preprocessing | 在把图片交给模型或算法之前，统一尺寸、调整亮度、去噪等准备工作 | YOLO 先把照片缩放到 640 像素再识别 |
 | <span id="g-函数"></span>函数 | Function | 把一段做好某件事的代码打包起来、起个名字，以后用名字就能反复调用 | def process(path): 处理一张图片 |
 | <span id="g-循环"></span>循环 | Loop | 让一段代码对一组东西逐个重复执行的写法，Python 中常用 for | for f in files: 依次处理每张照片 |
+| <span id="g-列表"></span>列表 | List | 用方括号把一组东西按顺序括起来的 Python 数据，可以用下标（从 0 开始）取出其中的元素 | ["a.jpg", "b.jpg"]；contours[0] 是第一个轮廓 |
 
 ## 第 3 章 图像特征：从边缘到卷积
 
 | 术语 | 英文 | 定义 | 例子 |
 |---|---|---|---|
+| <span id="g-特征"></span>特征 | Feature | 图片中能帮助区分物体的线索，如颜色、边缘、形状、角点、纹理 | 车道线的“亮暗分界 + 斜直线”就是它的特征 |
+| <span id="g-手工特征"></span>手工特征 | Hand-crafted Feature | 由人设计规则、用公式提取的特征，看得懂、不需要训练，但规则难以写全 | 用宽高比 2.5～6 的亮长方形找车牌 |
+| <span id="g-边缘"></span>边缘 | Edge | 图片中亮度变化剧烈的地方，通常对应物体的边界 | 车道线和路面之间的亮暗分界线 |
+| <span id="g-边缘检测"></span>边缘检测 | Edge Detection | 找出图片中边缘像素的方法，最常用的是 Canny 算法（去噪、算变化、细化、双门槛连接） | cv2.Canny(blur, 50, 150) |
+| <span id="g-霍夫变换"></span>霍夫变换 | Hough Transform | 让每个边缘点为穿过它的直线投票、票数最多的就是图中直线的方法 | 传统车道线检测中用 cv2.HoughLinesP 找出车道线 |
+| <span id="g-轮廓"></span>轮廓 | Contour | 二值图中一块区域首尾相连的闭合边界，可以用来计数和量面积 | 用 cv2.findContours 数出 11 个药片轮廓 |
+| <span id="g-外接矩形"></span>外接矩形 | Bounding Rectangle | 刚好把一个轮廓或物体框住的矩形，用左上角坐标和宽、高表示，是检测框的前身 | cv2.boundingRect 给出 (x, y, w, h) |
+| <span id="g-卷积"></span>卷积 | Convolution | 卷积核在图片上逐格滑动，每到一处把对应位置的数相乘再全部相加，得到输出的计算 | Sobel 核与车顶边缘的 3×3 小块卷积得到 −309 |
+| <span id="g-卷积核"></span>卷积核 | Kernel | 卷积中使用的小表格（如 3×3），里面的数决定卷积起模糊、锐化还是找边缘的作用 | 九个数都是 1/9 的平均核 |
+| <span id="g-关键点"></span>关键点 | Keypoint | 图片中很有特点、换个角度或距离也能认出的点，可用于两张图之间的配对 | 窗户的角、招牌上的字；ORB 算法找出的点 |
+| <span id="g-模板匹配"></span>模板匹配 | Template Matching | 把一小块样板图在大图上逐格滑动比较，找出最相似位置的方法，只适合找一模一样的东西 | 在屏幕截图中找到某个按钮 |
+| <span id="g-人脸检测"></span>人脸检测 | Face Detection | 找出图片中人脸位置的任务，传统方法有 Haar 级联，现在多用深度学习模型 | 数码相机的人脸对焦框 |
+| <span id="g-个人信息"></span>个人信息 | Personal Information | 以电子或其他方式记录的、与已识别或可识别的自然人有关的各种信息；人脸等生物识别信息属于敏感个人信息 | 行车视频里路人的脸、其他车辆的车牌 |
+| <span id="g-卷积神经网络"></span>卷积神经网络 | Convolutional Neural Network, CNN | 由多层卷积等运算组成、卷积核的数从大量图片中自动学出来的神经网络，是深度学习视觉模型的基础 | AlexNet、ResNet；第一层学出边缘检测器 |
+| <span id="g-条件判断"></span>条件判断 | Conditional Statement | 按条件是否成立决定执行哪段代码的写法，Python 中用 if、elif、else | if k < -0.5: 判为左车道线 |
 
 ## 第 4 章 图像分类：让模型认出图片
 

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canny 双门槛</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.pics { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width:600px) { .pics { grid-template-columns:1fr; } }
+.pics canvas { width:100%; border:1px solid var(--line); border-radius:6px; background:#000; }
+.cap { font-size:12px; color:var(--muted); text-align:center; }
+.lg span { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:middle; margin:0 4px 0 10px; }
+.mono { font-family:Consolas,monospace; }
+</style>
+</head>
+<body>
+<h1>Canny 双门槛：强边缘直接留，弱边缘看“有没有靠山”</h1>
+<div class="sub">拖动低门槛和高门槛。变化强度高于高门槛的是“强边缘”（白）；介于两个门槛之间的是“弱边缘”，和强边缘连着的留下（黄），孤零零的丢掉（暗红）；低于低门槛的直接丢掉。</div>
+<div class="row ex"><span class="lbl">照片：</span><button data-img="lane.jpg" class="on">白色车道线</button><button data-img="street.jpg">城市街道</button><button data-img="night.jpg">压暗的“夜间”车道</button></div>
+<div class="row"><span>低门槛</span><input type="range" id="lo" min="0" max="300" value="50"><span class="big mono" id="lov"></span></div>
+<div class="row"><span>高门槛</span><input type="range" id="hi" min="0" max="400" value="150"><span class="big mono" id="hiv"></span></div>
+<div class="row"><label><input type="checkbox" id="show" checked> 显示弱边缘的去留（取消勾选就是 cv2.Canny 的真实输出）</label></div>
+<div class="pics">
+  <div><canvas id="a"></canvas><div class="cap">原图（已做 5×5 高斯去噪）</div></div>
+  <div><canvas id="b"></canvas><div class="cap lg"><span style="background:#fff;border:1px solid #999"></span>强边缘<span style="background:#ffc107"></span>连上了的弱边缘<span style="background:#8b1e1e"></span>丢掉的弱边缘</div></div>
+</div>
+<div class="msg" id="msg"></div>
+<div class="note">计算步骤与 OpenCV 的 cv2.Canny 相同：Sobel 算变化强度和方向 → 只保留方向上最强的点（细化成一条线）→ 双门槛 → 弱边缘沿 8 个邻居连到强边缘才保留。强度用 |水平变化| + |竖直变化| 计算（cv2.Canny 的默认算法），结果与 OpenCV 基本一致。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var A = $("a"), B = $("b"), actx = A.getContext("2d", { willReadFrequently: true }), bctx = B.getContext("2d");
+  var W, H, mag, nms;
+  function load(name) { var im = new Image(); im.onload = function () {
+    W = A.width = B.width = im.width; H = A.height = B.height = im.height; actx.drawImage(im, 0, 0);
+    var d = actx.getImageData(0, 0, W, H).data, g = new Float32Array(W * H), s = new Float32Array(W * H), t = new Float32Array(W * H);
+    for (var i = 0; i < W * H; i++) g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+    var k = [1, 4, 6, 4, 1].map(function (v) { return v / 16; }), x, y, j;
+    function cl(v, m) { return v < 0 ? 0 : v >= m ? m - 1 : v; }
+    for (y = 0; y < H; y++) for (x = 0; x < W; x++) { var a = 0; for (j = -2; j <= 2; j++) a += g[y * W + cl(x + j, W)] * k[j + 2]; t[y * W + x] = a; }
+    for (y = 0; y < H; y++) for (x = 0; x < W; x++) { a = 0; for (j = -2; j <= 2; j++) a += t[cl(y + j, H) * W + x] * k[j + 2]; s[y * W + x] = a; }
+    var gx = new Float32Array(W * H), gy = new Float32Array(W * H); mag = new Float32Array(W * H); nms = new Float32Array(W * H);
+    for (y = 1; y < H - 1; y++) for (x = 1; x < W - 1; x++) {
+      var p = function (dx, dy) { return s[(y + dy) * W + x + dx]; };
+      gx[y * W + x] = -p(-1, -1) - 2 * p(-1, 0) - p(-1, 1) + p(1, -1) + 2 * p(1, 0) + p(1, 1);
+      gy[y * W + x] = -p(-1, -1) - 2 * p(0, -1) - p(1, -1) + p(-1, 1) + 2 * p(0, 1) + p(1, 1);
+      mag[y * W + x] = Math.abs(gx[y * W + x]) + Math.abs(gy[y * W + x]);
+    }
+    for (y = 1; y < H - 1; y++) for (x = 1; x < W - 1; x++) {
+      var i0 = y * W + x, ang = Math.atan2(gy[i0], gx[i0]) * 180 / Math.PI; if (ang < 0) ang += 180;
+      var n1, n2;
+      if (ang < 22.5 || ang >= 157.5) { n1 = i0 - 1; n2 = i0 + 1; }
+      else if (ang < 67.5) { n1 = i0 - W - 1; n2 = i0 + W + 1; }
+      else if (ang < 112.5) { n1 = i0 - W; n2 = i0 + W; }
+      else { n1 = i0 - W + 1; n2 = i0 + W - 1; }
+      nms[i0] = (mag[i0] >= mag[n1] && mag[i0] > mag[n2]) ? mag[i0] : 0;
+    }
+    var out = actx.createImageData(W, H);
+    for (i = 0; i < W * H; i++) { out.data[i * 4] = out.data[i * 4 + 1] = out.data[i * 4 + 2] = s[i]; out.data[i * 4 + 3] = 255; }
+    actx.putImageData(out, 0, 0); run(); }; im.src = "img/" + name; }
+  function run() {
+    var lo = +$("lo").value, hi = +$("hi").value; if (lo > hi) { $("lo").value = lo = hi; }
+    $("lov").textContent = lo; $("hiv").textContent = hi;
+    if (!mag) return;
+    var st = new Uint8Array(W * H), stack = [], i, nS = 0, nK = 0, nD = 0;
+    for (i = 0; i < W * H; i++) { if (nms[i] > hi) { st[i] = 2; stack.push(i); nS++; } else if (nms[i] > lo) st[i] = 1; }
+    while (stack.length) { var c = stack.pop(), x = c % W, y = (c - x) / W;
+      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) { var n = (y + dy) * W + x + dx; if (n >= 0 && n < W * H && st[n] === 1) { st[n] = 3; stack.push(n); } } }
+    var out = bctx.createImageData(W, H), show = $("show").checked;
+    for (i = 0; i < W * H; i++) {
+      var col = [0, 0, 0];
+      if (st[i] === 2) col = [255, 255, 255];
+      else if (st[i] === 3) { col = show ? [255, 193, 7] : [255, 255, 255]; nK++; }
+      else if (st[i] === 1) { if (show) col = [139, 30, 30]; nD++; }
+      out.data[i * 4] = col[0]; out.data[i * 4 + 1] = col[1]; out.data[i * 4 + 2] = col[2]; out.data[i * 4 + 3] = 255;
+    }
+    bctx.putImageData(out, 0, 0);
+    $("msg").innerHTML = "强边缘 <b>" + nS + "</b> 个，连上了的弱边缘 <b>" + nK + "</b> 个，丢掉的弱边缘 <b>" + nD + "</b> 个；最终边缘像素 <b>" + (nS + nK) + "</b> 个。<br>OpenCV 写法：<code>cv2.Canny(blur, " + lo + ", " + hi + ")</code>";
+  }
+  $("lo").oninput = run; $("hi").oninput = run; $("show").onchange = run;
+  document.querySelectorAll("[data-img]").forEach(function (b) { b.onclick = function () {
+    document.querySelectorAll("[data-img]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); load(b.dataset.img); }; });
+  load("lane.jpg");
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>卷积核滑动</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.wrap { display:grid; grid-template-columns:auto auto 1fr; gap:14px; align-items:start; }
+@media (max-width:720px) { .wrap { grid-template-columns:1fr; } }
+table.g { border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; }
+table.g td { width:30px; height:24px; text-align:center; border:1px solid #eceff1; }
+table.g td.win { outline:2px solid var(--accent); outline-offset:-2px; }
+table.g td.out { outline:2px solid var(--warn); outline-offset:-2px; }
+table.k td { width:42px; padding:0; }
+table.k input { width:40px; text-align:center; border:1px solid var(--line); border-radius:4px; font:inherit; font-size:13px; padding:3px 0; }
+.calc { font-size:12.5px; background:#f5f7fa; border-radius:6px; padding:6px 8px; margin-top:6px; font-family:Consolas,monospace; word-break:break-all; }
+.pics { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+.pics canvas { width:100%; border:1px solid var(--line); border-radius:6px; }
+.cap { font-size:12px; color:var(--muted); text-align:center; }
+h3 { font-size:13px; margin:0 0 4px; color:var(--accent); }
+</style>
+</head>
+<body>
+<h1>卷积核滑动：一个 3×3 小窗口，乘一乘、加一加</h1>
+<div class="sub">左边是一小块图片的灰度值（10×10），中间是卷积核。点“下一步”看窗口一格格滑动、输出逐格出现；也可以直接改卷积核的九个数。下面两张图是同一个核作用在整张照片上的结果。</div>
+<div class="row ex"><span class="lbl">卷积核：</span>
+  <button data-k="0,0,0,0,1,0,0,0,0">原样</button><button data-k="1/9,1/9,1/9,1/9,1/9,1/9,1/9,1/9,1/9">平均（模糊）</button><button data-k="0,-1,0,-1,5,-1,0,-1,0">锐化</button><button data-k="-1,0,1,-2,0,2,-1,0,1" class="on">竖直边缘</button><button data-k="-1,-2,-1,0,0,0,1,2,1">水平边缘</button><button data-k="0,1,0,1,-4,1,0,1,0">拉普拉斯</button>
+</div>
+<div class="row ex"><span class="lbl">照片：</span><button data-img="street.jpg" class="on">城市街道</button><button data-img="lane.jpg">白色车道线</button>
+  <span style="flex:1"></span><button id="step" class="main">下一步</button><button id="play">自动播放</button><button id="reset">重来</button></div>
+<div class="wrap">
+  <div><h3>输入（灰度值）</h3><table class="g" id="gin"></table></div>
+  <div><h3>卷积核（可以改）</h3><table class="k" id="gk"></table><div class="calc" id="calc"></div></div>
+  <div><h3>输出</h3><table class="g" id="gout"></table></div>
+</div>
+<div class="pics">
+  <div><canvas id="a"></canvas><div class="cap">原图（蓝框处就是左上方的 10×10 小块）</div></div>
+  <div><canvas id="b"></canvas><div class="cap">整张图卷积后（显示绝对值，超过 255 按 255）</div></div>
+</div>
+<div class="note">数据：浏览器读取照片像素并换算成灰度（0.299 红 + 0.587 绿 + 0.114 蓝），计算方法与实验 3-2 的 cv2.filter2D 相同；边上一圈像素此处不计算（输出留空），OpenCV 会自动补边。照片裁自 KITTI（CC BY-NC-SA 3.0）和 Udacity（MIT）。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, N = 10;
+  var A = $("a"), B = $("b"), actx = A.getContext("2d", { willReadFrequently: true }), bctx = B.getContext("2d");
+  var G, W, H, px = 0, py = 0, patch = [], K = [], pos = 0, timer = null;
+  function parse(v) { if (String(v).indexOf("/") > 0) { var p = v.split("/"); return +p[0] / +p[1]; } return +v; }
+  function fmt(v) { return Math.abs(v - Math.round(v)) < 1e-6 ? String(Math.round(v)) : v.toFixed(2); }
+  function buildK(list) {
+    var h = ""; for (var i = 0; i < 3; i++) { h += "<tr>"; for (var j = 0; j < 3; j++) h += '<td><input id="k' + (i * 3 + j) + '" value="' + list[i * 3 + j] + '"></td>'; h += "</tr>"; }
+    $("gk").innerHTML = h; for (var t = 0; t < 9; t++) $("k" + t).oninput = function () { readK(); whole(); draw(); };
+    readK();
+  }
+  function readK() { K = []; for (var t = 0; t < 9; t++) { var v = parse($("k" + t).value); K.push(isNaN(v) ? 0 : v); } }
+  function load(name) { var im = new Image(); im.onload = function () {
+    W = A.width = B.width = im.width; H = A.height = B.height = im.height; actx.drawImage(im, 0, 0);
+    var d = actx.getImageData(0, 0, W, H).data; G = new Float32Array(W * H);
+    for (var i = 0; i < W * H; i++) G[i] = Math.round(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]);
+    px = name === "lane.jpg" ? 250 : 130; py = name === "lane.jpg" ? 175 : 95;
+    patch = []; for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) patch.push(G[(py + y) * W + px + x]);
+    pos = 0; whole(); draw(); }; im.src = "img/" + name; }
+  function conv(get, x, y) { var s = 0; for (var j = -1; j <= 1; j++) for (var i = -1; i <= 1; i++) s += get(x + i, y + j) * K[(j + 1) * 3 + i + 1]; return s; }
+  function whole() {
+    var out = bctx.createImageData(W, H);
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      var v = (x === 0 || y === 0 || x === W - 1 || y === H - 1) ? 0 : Math.min(255, Math.abs(conv(function (a, b) { return G[b * W + a]; }, x, y)));
+      var k = (y * W + x) * 4; out.data[k] = out.data[k + 1] = out.data[k + 2] = v; out.data[k + 3] = 255;
+    }
+    bctx.putImageData(out, 0, 0);
+    actx.strokeStyle = "#3f51b5"; actx.lineWidth = 2; actx.strokeRect(px - 1, py - 1, N + 2, N + 2);
+  }
+  function draw() {
+    var M = (N - 2) * (N - 2), cx = 1 + (pos % (N - 2)), cy = 1 + Math.floor(pos / (N - 2)), h = "", o = "";
+    var get = function (a, b) { return patch[b * N + a]; };
+    for (var y = 0; y < N; y++) {
+      h += "<tr>"; o += "<tr>";
+      for (var x = 0; x < N; x++) {
+        var win = pos < M && Math.abs(x - cx) <= 1 && Math.abs(y - cy) <= 1, g = patch[y * N + x];
+        h += '<td class="' + (win ? "win" : "") + '" style="background:rgb(' + g + "," + g + "," + g + ");color:" + (g > 128 ? "#000" : "#fff") + '">' + g + "</td>";
+        var idx = (y - 1) * (N - 2) + (x - 1), inside = x > 0 && y > 0 && x < N - 1 && y < N - 1, done = inside && idx < pos, cur = inside && idx === pos && pos < M;
+        var v = (done || cur) ? conv(get, x, y) : null, c = v === null ? 255 : Math.min(255, Math.abs(Math.round(v)));
+        o += '<td class="' + (cur ? "out" : "") + '" style="background:' + (v === null ? "#fff" : "rgb(" + c + "," + c + "," + c + ")") + ";color:" + (c > 128 ? "#000" : "#fff") + '">' + (v === null ? "" : fmt(v)) + "</td>";
+      }
+      h += "</tr>"; o += "</tr>";
+    }
+    $("gin").innerHTML = h; $("gout").innerHTML = o;
+    if (pos < M) {
+      var parts = [], s = 0;
+      for (var j = -1; j <= 1; j++) for (var i = -1; i <= 1; i++) { var a = get(cx + i, cy + j), k = K[(j + 1) * 3 + i + 1]; s += a * k; if (k !== 0) parts.push(a + "×" + fmt(k)); }
+      $("calc").innerHTML = "第 " + (pos + 1) + " / " + M + " 格：<br>" + (parts.join(" + ") || "0") + "<br>= <b>" + fmt(s) + "</b>";
+    } else $("calc").innerHTML = "全部 " + M + " 格算完了。点“重来”再看一遍。";
+  }
+  $("step").onclick = function () { if (pos < (N - 2) * (N - 2)) pos++; draw(); };
+  $("reset").onclick = function () { pos = 0; draw(); };
+  $("play").onclick = function () {
+    if (timer) { clearInterval(timer); timer = null; $("play").textContent = "自动播放"; return; }
+    $("play").textContent = "暂停";
+    timer = setInterval(function () { if (pos >= (N - 2) * (N - 2)) { clearInterval(timer); timer = null; $("play").textContent = "自动播放"; } else { pos++; draw(); } }, 350);
+  };
+  document.querySelectorAll("[data-k]").forEach(function (b) { b.onclick = function () {
+    document.querySelectorAll("[data-k]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); buildK(b.dataset.k.split(",")); whole(); draw(); }; });
+  document.querySelectorAll("[data-img]").forEach(function (b) { b.onclick = function () {
+    document.querySelectorAll("[data-img]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); load(b.dataset.img); }; });
+  buildK("-1,0,1,-2,0,2,-1,0,1".split(",")); load("street.jpg");
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

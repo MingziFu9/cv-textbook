@@ -25,7 +25,7 @@ description: 用 OpenCV 读写图片，做裁剪、缩放、旋转、颜色空�
     - 实验 1-1、1-2：会在 Notebook 里运行代码，会用 `img[行, 列]` 取像素；
     - 附录 A 中的变量、`print`、`import`。本章的“Python 小课堂②”会讲函数和 `for` 循环。
 
-??? abstract "本章概念清单（18 个，点击查看定义和例子）"
+??? abstract "本章概念清单（19 个，点击查看定义和例子）"
     1. [图像处理](../../appendix/glossary.md#g-图像处理)
     2. [感兴趣区域](../../appendix/glossary.md#g-感兴趣区域)
     3. [插值](../../appendix/glossary.md#g-插值)
@@ -44,6 +44,7 @@ description: 用 OpenCV 读写图片，做裁剪、缩放、旋转、颜色空�
     16. [图像预处理](../../appendix/glossary.md#g-图像预处理)
     17. [函数](../../appendix/glossary.md#g-函数)
     18. [循环](../../appendix/glossary.md#g-循环)
+    19. [列表](../../appendix/glossary.md#g-列表)
 
 ## 情景导入
 
@@ -452,7 +453,7 @@ for name in ["drive_city.jpg", "lane_white.jpg", "lane_yellow.jpg"]:
 print("全部完成")                         # 没缩进，循环结束后只执行一次
 ```
 
-`for name in 一组东西:` 的意思是“把这组东西一个一个拿出来，每次叫它 `name`，执行一遍下面缩进的代码”。方括号 `[…]` 写的是一个**列表**，就是“一组东西”。
+`for name in 一组东西:` 的意思是“把这组东西一个一个拿出来，每次叫它 `name`，执行一遍下面缩进的代码”。方括号 `[…]` 写的是一个[**列表**](../../appendix/glossary.md#g-列表 "用方括号把一组东西按顺序括起来的 Python 数据，可以用下标（从 0 开始）取出其中的元素"){ .term }，就是“一组东西”。
 
 **3. 文件列表：找出文件夹里的所有图片**
 
