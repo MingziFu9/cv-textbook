@@ -6,3 +6,15 @@ __pycache__/
 .ipynb_checkpoints/
 build/
 node_modules/
+
+# 大数据与运行产物
+labs/data/kitti.zip
+labs/data/kitti_raw/
+labs/data/kitti_small/
+labs/data/videos/project_video.mp4
+labs/data/videos/solid*.mp4
+labs/data/videos/*_demo.mp4
+labs/**/runs/
+*.pt
+*.onnx
+labs/**/output/

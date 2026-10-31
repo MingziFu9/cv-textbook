@@ -1,8 +1,8 @@
 # 站点名、描述、网址和 nav 由 python tools/course.py sync 根据 course.yml 生成，请改 course.yml，不要手改这几项
-site_name: 课程名称
-site_description: 面向成人教育人工智能技术应用专业（专科）的《课程名称》教材，每章配套动手实验
-site_url: https://mingzifu9.github.io/ai-textbook-template/
-repo_url: https://github.com/MingziFu9/ai-textbook-template
+site_name: 计算机视觉及应用实战
+site_description: 面向成人教育人工智能技术应用专业（专科）的《计算机视觉及应用实战》教材，零基础起步，每章配套 4 个动手实验，贯穿“智能辅助驾驶助手”项目
+site_url: https://mingzifu9.github.io/cv-textbook/
+repo_url: https://github.com/MingziFu9/cv-textbook
 docs_dir: docs
 theme:
   name: material
@@ -37,15 +37,24 @@ extra_javascript:
 nav:
   - 首页: index.md
   - 课程描述: course-description.md
-  - "第 1 章 示例章": chapters/01-sample/index.md
+  - "第 1 章 走进计算机视觉": chapters/01-intro/index.md
+  - "第 2 章 图像处理基础：用 OpenCV 修图": chapters/02-image-processing/index.md
+  - "第 3 章 图像特征：从边缘到卷积": chapters/03-features/index.md
+  - "第 4 章 图像分类：让模型认出图片": chapters/04-classification/index.md
+  - "第 5 章 目标检测：找出图中的物体": chapters/05-detection/index.md
+  - "第 6 章 图像分割：精确到每个像素": chapters/06-segmentation/index.md
+  - "第 7 章 视频分析：让模型看懂动态画面": chapters/07-video/index.md
+  - "第 8 章 生成式视觉：Stable Diffusion 与图像修复": chapters/08-generative/index.md
+  - "第 9 章 视觉应用实战与综合项目": chapters/09-applications/index.md
   - 交互动画:
     - sims/index.md
     - "示例动画：点击计数器": sims/example-counter/index.md
   - 学习图谱: learning-graph/index.md
   - 常见问题: faq/index.md
-  - 证书考点对照: certificate.md
+  - "在线模拟卷": mock-exam.md
   - 附录:
-    - "附录 A Python 速查": appendix/a-python.md
-    - "附录 B 工具库速查": appendix/b-libraries.md
+    - "附录 A 零基础 Python 入门": appendix/a-python.md
+    - "附录 B OpenCV 与 YOLO 速查": appendix/b-libraries.md
     - "附录 C 实验环境与数据说明": appendix/c-environment.md
     - "附录 D 术语表": appendix/glossary.md
+    - "附录 E 实验报告模板与综合项目指南": appendix/e-project.md

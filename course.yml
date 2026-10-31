@@ -7,38 +7,45 @@
 # 也从这里读取课程名、学时等信息
 # ============================================================
 
-title: 课程名称                      # 书名，例如：机器学习
-description: 面向成人教育人工智能技术应用专业（专科）的《课程名称》教材，每章配套动手实验
+title: 计算机视觉及应用实战
+description: 面向成人教育人工智能技术应用专业（专科）的《计算机视觉及应用实战》教材，零基础起步，每章配套 4 个动手实验，贯穿“智能辅助驾驶助手”项目
 audience: 成人教育（继续教育）人工智能技术应用专业专科学生，多为在职学习者
 github_user: MingziFu9                # 网址 https://<github_user>.github.io/<repo>/
-repo: ai-textbook-template            # GitHub 仓库名（用模板新建后改成本课的，如 ml-textbook）
+repo: cv-textbook
 
 credits: 4                            # 学分
-hours: {theory: 60, lab: 12}          # 学时：理论 + 实验
-semester: 3                           # 开课学期
-exam: 闭卷                            # 期末考核方式
-labs_per_chapter: 3                   # 每章实验数；0 表示没有实验
+hours: {theory: 36, lab: 36}          # 学时：理论 + 实验
+semester: 4                           # 开课学期
+exam: 开卷                            # 期末考核方式
+labs_per_chapter: 4                   # 每章实验数；0 表示没有实验
 lab_section: 本章实验                 # 实验部分的二级标题；导论用“在线体验”
 lab_word: 实验                        # 每个实验的三级标题前缀（### 实验 N-M）；导论用“体验”
 frontier_title: 前沿视窗              # 每章“前沿”小节的名称，导论用“身边的 AI”
-certificates:                         # 对应的职业证书；没有证书的课程写成 certificates: []，导航里就不显示“证书考点对照”页
-  - name: 证书名称（级别）
-    issuer: 发证机构，标准或考纲名称（年份）
+certificates: []
 
 # 章节：dir 是 docs/chapters/ 下的文件夹名（两位章号开头），short 用于学习图谱等窄处
 # theory / lab 是本章学时；labs 可单独覆盖本章实验数；offline 可指定本章线下学时（不写则按 online_ratio 分）
 chapters:
-  - {dir: 01-sample, title: 示例章, short: 示例章, theory: 5, lab: 1}
+  - {dir: 01-intro, title: 走进计算机视觉, short: 走进视觉, theory: 4, lab: 4, offline: 1}
+  - {dir: 02-image-processing, title: 图像处理基础：用 OpenCV 修图, short: 图像处理, theory: 4, lab: 4, offline: 1}
+  - {dir: 03-features, title: 图像特征：从边缘到卷积, short: 图像特征, theory: 4, lab: 4, offline: 1}
+  - {dir: 04-classification, title: 图像分类：让模型认出图片, short: 图像分类, theory: 4, lab: 4, offline: 1}
+  - {dir: 05-detection, title: 目标检测：找出图中的物体, short: 目标检测, theory: 4, lab: 4, offline: 2}
+  - {dir: 06-segmentation, title: 图像分割：精确到每个像素, short: 图像分割, theory: 4, lab: 4, offline: 2}
+  - {dir: 07-video, title: 视频分析：让模型看懂动态画面, short: 视频分析, theory: 4, lab: 4, offline: 2}
+  - {dir: 08-generative, title: 生成式视觉：Stable Diffusion 与图像修复, short: 生成式视觉, theory: 4, lab: 4, offline: 2}
+  - {dir: 09-applications, title: 视觉应用实战与综合项目, short: 应用实战, theory: 4, lab: 4, offline: 2}
 
 # 其他页面：追加在导航“常见问题”之后，如 extra_pages: [{file: mock-exam.md, title: 在线模拟卷}]
-extra_pages: []
+extra_pages: [{file: mock-exam.md, title: 在线模拟卷}]
 
 # 附录：docs/appendix/ 下的文件，按顺序自动编号为 A、B、C……（术语表固定为 glossary.md）
 appendices:
-  - {file: a-python.md, title: Python 速查}
-  - {file: b-libraries.md, title: 工具库速查}
+  - {file: a-python.md, title: 零基础 Python 入门}
+  - {file: b-libraries.md, title: OpenCV 与 YOLO 速查}
   - {file: c-environment.md, title: 实验环境与数据说明}
   - {file: glossary.md, title: 术语表}
+  - {file: e-project.md, title: 实验报告模板与综合项目指南}
 
 # 教案默认设置（每章可在 lesson-plans/chNN.yml 里覆盖）
 lesson_plan:

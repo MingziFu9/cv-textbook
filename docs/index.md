@@ -1,4 +1,4 @@
-# 课程名称
+# 计算机视觉及应用实战
 
 **面向成人教育人工智能技术应用专业（专科）的《课程名称》教材**
 
@@ -6,9 +6,7 @@
 
 <!-- course:start -->
 !!! abstract "课程信息"
-    4 学分 · 72 学时（理论 60 学时 + 实验 12 学时） · 第 3 学期 · 1 章 · 3 个实验 · 期末闭卷
-
-    对应证书：证书名称（级别）
+    4 学分 · 72 学时（理论 36 学时 + 实验 36 学时） · 第 4 学期 · 9 章 · 36 个实验 · 期末开卷
 <!-- course:end -->
 
 ## 这本书讲什么
@@ -41,9 +39,17 @@
 <!-- toc:start -->
 | 章节 | 实验 |
 |---|---|
-| [第 1 章 示例章](chapters/01-sample/index.md) | 实验 1-1 ★ 示例实验 |
+| [第 1 章 走进计算机视觉](chapters/01-intro/index.md) | 实验 1-1 ★ 实验名称<br>实验 1-2 ★ 实验名称<br>实验 1-3 ★ 实验名称<br>实验 1-4 ★ 实验名称 |
+| [第 2 章 图像处理基础：用 OpenCV 修图](chapters/02-image-processing/index.md) | 实验 2-1 ★ 实验名称<br>实验 2-2 ★ 实验名称<br>实验 2-3 ★ 实验名称<br>实验 2-4 ★ 实验名称 |
+| [第 3 章 图像特征：从边缘到卷积](chapters/03-features/index.md) | 实验 3-1 ★ 实验名称<br>实验 3-2 ★ 实验名称<br>实验 3-3 ★ 实验名称<br>实验 3-4 ★ 实验名称 |
+| [第 4 章 图像分类：让模型认出图片](chapters/04-classification/index.md) | 实验 4-1 ★ 实验名称<br>实验 4-2 ★ 实验名称<br>实验 4-3 ★ 实验名称<br>实验 4-4 ★ 实验名称 |
+| [第 5 章 目标检测：找出图中的物体](chapters/05-detection/index.md) | 实验 5-1 ★ 实验名称<br>实验 5-2 ★ 实验名称<br>实验 5-3 ★ 实验名称<br>实验 5-4 ★ 实验名称 |
+| [第 6 章 图像分割：精确到每个像素](chapters/06-segmentation/index.md) | 实验 6-1 ★ 实验名称<br>实验 6-2 ★ 实验名称<br>实验 6-3 ★ 实验名称<br>实验 6-4 ★ 实验名称 |
+| [第 7 章 视频分析：让模型看懂动态画面](chapters/07-video/index.md) | 实验 7-1 ★ 实验名称<br>实验 7-2 ★ 实验名称<br>实验 7-3 ★ 实验名称<br>实验 7-4 ★ 实验名称 |
+| [第 8 章 生成式视觉：Stable Diffusion 与图像修复](chapters/08-generative/index.md) | 实验 8-1 ★ 实验名称<br>实验 8-2 ★ 实验名称<br>实验 8-3 ★ 实验名称<br>实验 8-4 ★ 实验名称 |
+| [第 9 章 视觉应用实战与综合项目](chapters/09-applications/index.md) | 实验 9-1 ★ 实验名称<br>实验 9-2 ★ 实验名称<br>实验 9-3 ★ 实验名称<br>实验 9-4 ★ 实验名称 |
 
-附录：[A Python 速查](appendix/a-python.md) · [B 工具库速查](appendix/b-libraries.md) · [C 实验环境与数据说明](appendix/c-environment.md) · [D 术语表](appendix/glossary.md)
+附录：[A 零基础 Python 入门](appendix/a-python.md) · [B OpenCV 与 YOLO 速查](appendix/b-libraries.md) · [C 实验环境与数据说明](appendix/c-environment.md) · [D 术语表](appendix/glossary.md) · [E 实验报告模板与综合项目指南](appendix/e-project.md)
 <!-- toc:end -->
 
 ## 配套资源
