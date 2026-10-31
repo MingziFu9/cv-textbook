@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>增强现实贴图</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+#stage { position:relative; width:100%; max-width:640px; aspect-ratio:640/360; border:1px solid var(--line); border-radius:6px; overflow:hidden; user-select:none; touch-action:none; }
+#inner { position:absolute; left:0; top:0; width:640px; height:360px; transform-origin:0 0; }
+#bg { position:absolute; inset:0; width:640px; height:360px; }
+#tex { position:absolute; left:0; top:0; width:480px; height:1000px; transform-origin:0 0; pointer-events:none; }
+#quad { position:absolute; inset:0; pointer-events:none; }
+.h { position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; border:2px solid #fff; background:rgba(229,57,53,.85); cursor:grab; box-shadow:0 0 3px #000; color:#fff; font-size:11px; line-height:18px; text-align:center; font-weight:bold; }
+#H td { font-family:"JetBrains Mono",Consolas,monospace; min-width:5.5em; }
+</style>
+</head>
+<body>
+<h1>增强现实贴图：四个角决定一切</h1>
+<div class="sub">红点是程序找到的标记码四个角（1 左上、2 右上、3 右下、4 左下）。拖动红点，看导航箭头怎样跟着“贴”在路面上；下方是由这四对点算出的单应性矩阵 H。</div>
+<div class="row ex"><span class="lbl">贴什么：</span><button data-t="arrow" class="on">导航箭头</button><button data-t="grid">方格纸</button><button data-t="sign">提示牌</button></div>
+<div class="row ex"><span class="lbl">四个角：</span><button data-p="marker" class="on">对准标记码</button><button data-p="rect">不做透视（外接矩形）</button><button data-p="tilt">换个角度看</button><button data-p="swap">把 3、4 号角弄反</button></div>
+<div id="stage"><div id="inner">
+  <img id="bg" src="img/road.jpg" alt="路面上平放的标记码">
+  <div id="tex"></div>
+  <svg id="quad" viewBox="0 0 640 360"><polygon id="poly" fill="none" stroke="#e53935" stroke-width="2" stroke-dasharray="5 3"/></svg>
+</div></div>
+<div class="grid2">
+  <div class="box"><h2>单应性矩阵 H（纸上的点 → 照片上的点）</h2><table class="t" id="H"></table></div>
+  <div class="box"><h2>四个角的坐标</h2><table class="t" id="pts"></table></div>
+</div>
+<div class="msg" id="tip"></div>
+<div class="note">数据：背景是编者合成的“测试场地路面上平放一块 7 号 ArUco 码”的照片（底图来自 Udacity 行车视频，MIT 许可），四个角由 OpenCV 的 ArucoDetector 找到，与实验 9-2 相同；这里的坐标是从原照片裁出的 640×360 区域里的坐标。箭头、方格、提示牌都画在一张 480×1000 的“纸”上，标记码在纸底部中间的 240×240 区域。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var SRC = [[120, 760], [360, 760], [360, 1000], [120, 1000]];       // 标记码在“纸”上的四个角
+  var P = {
+    marker: [[286, 223], [399, 223], [417, 285], [268, 284]],
+    rect: [[268, 223], [417, 223], [417, 285], [268, 285]],
+    tilt: [[300, 200], [420, 215], [400, 300], [250, 270]],
+    swap: [[286, 223], [399, 223], [268, 284], [417, 285]]
+  };
+  var TIP = {
+    marker: "四个角对准标记码时，箭头像真的画在路面上：越远越窄，方向沿着车道。这就是 AR 导航“贴”箭头的原理。",
+    rect: "只按外接矩形缩放、不做透视时，四个角不再贴合标记码，箭头像是竖着立在空中，和路面“对不上”。",
+    tilt: "假设换了个角度拍，标记码在画面里变到了红框的位置（背景照片没换，请只看红框）。只要四个角跟着标记码走，贴上去的东西就跟着转、跟着变形。手机 AR 每一帧都重新找角、重新算 H。",
+    swap: "四个角的顺序弄反了，H 会把纸“拧”过来，贴图翻转扭曲。所以程序必须知道哪个角是 1 号——ArUco 码的图案正好能告诉它方向。"
+  };
+  var TEX = {
+    arrow: '<svg width="480" height="1000"><polygon points="200,990 280,990 280,300 380,300 240,80 100,300 200,300" fill="rgba(255,213,0,.7)"/></svg>',
+    grid: (function () {
+      var s = '<svg width="480" height="1000">';
+      for (var x = 0; x <= 480; x += 40) s += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="1000" stroke="rgba(0,229,255,.8)" stroke-width="3"/>';
+      for (var y = 0; y <= 1000; y += 40) s += '<line x1="0" y1="' + y + '" x2="480" y2="' + y + '" stroke="rgba(0,229,255,.8)" stroke-width="3"/>';
+      return s + '<rect x="120" y="760" width="240" height="240" fill="none" stroke="#ffeb3b" stroke-width="8"/></svg>';
+    })(),
+    sign: '<svg width="480" height="1000"><rect x="40" y="380" width="400" height="340" rx="30" fill="rgba(30,136,229,.8)"/>' +
+      '<text x="240" y="520" font-size="90" fill="#fff" text-anchor="middle" font-weight="bold">前方</text>' +
+      '<text x="240" y="650" font-size="90" fill="#fff" text-anchor="middle" font-weight="bold">右转 ➜</text></svg>'
+  };
+  var pts = P.marker.map(function (p) { return p.slice(); }), handles = [];
+
+  function solve(A, b) {                       // 高斯消元解 8 元一次方程组
+    var n = b.length, i, j, k;
+    for (i = 0; i < n; i++) {
+      var m = i; for (k = i + 1; k < n; k++) if (Math.abs(A[k][i]) > Math.abs(A[m][i])) m = k;
+      var t = A[i]; A[i] = A[m]; A[m] = t; t = b[i]; b[i] = b[m]; b[m] = t;
+      for (k = i + 1; k < n; k++) { var f = A[k][i] / A[i][i]; for (j = i; j < n; j++) A[k][j] -= f * A[i][j]; b[k] -= f * b[i]; }
+    }
+    var x = new Array(n);
+    for (i = n - 1; i >= 0; i--) { var s = b[i]; for (j = i + 1; j < n; j++) s -= A[i][j] * x[j]; x[i] = s / A[i][i]; }
+    return x;
+  }
+  function homography(src, dst) {
+    var A = [], b = [];
+    for (var i = 0; i < 4; i++) {
+      var x = src[i][0], y = src[i][1], u = dst[i][0], v = dst[i][1];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+    }
+    var h = solve(A, b);
+    return [[h[0], h[1], h[2]], [h[3], h[4], h[5]], [h[6], h[7], 1]];
+  }
+  function convex(q) {
+    var s = 0;
+    for (var i = 0; i < 4; i++) {
+      var a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+      var cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+      if (cr === 0) return false;
+      if (s === 0) s = Math.sign(cr); else if (Math.sign(cr) !== s) return false;
+    }
+    return true;
+  }
+  function fmt(v) { return Math.abs(v) < 0.0005 ? "0" : (Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(3)); }
+  function render() {
+    var H = homography(SRC, pts);
+    $("tex").style.transform = "matrix3d(" + [H[0][0], H[1][0], 0, H[2][0], H[0][1], H[1][1], 0, H[2][1], 0, 0, 1, 0, H[0][2], H[1][2], 0, H[2][2]].join(",") + ")";
+    $("H").innerHTML = H.map(function (r) { return "<tr>" + r.map(function (v) { return "<td>" + fmt(v) + "</td>"; }).join("") + "</tr>"; }).join("");
+    $("pts").innerHTML = "<tr><th>角</th><th>纸上</th><th>照片上</th></tr>" + pts.map(function (p, i) {
+      return "<tr><td>" + (i + 1) + "</td><td>(" + SRC[i].join(", ") + ")</td><td>(" + Math.round(p[0]) + ", " + Math.round(p[1]) + ")</td></tr>";
+    }).join("");
+    $("poly").setAttribute("points", pts.map(function (p) { return p.join(","); }).join(" "));
+    handles.forEach(function (h, i) { h.style.left = pts[i][0] + "px"; h.style.top = pts[i][1] + "px"; });
+    var ok = convex(pts);
+    $("tip").className = "msg" + (ok ? "" : " bad");
+    if (!ok) $("tip").textContent = "四个角围成的形状“打结”了（不是凸四边形），贴图会翻转或撕裂。真实的标记码不会出现这种情况，通常说明角的顺序错了。";
+  }
+  function scale() { return $("stage").clientWidth / 640; }
+  function fit() { $("inner").style.transform = "scale(" + scale() + ")"; }
+  for (var i = 0; i < 4; i++) {
+    var h = document.createElement("div"); h.className = "h"; h.textContent = i + 1; $("inner").appendChild(h); handles.push(h);
+    (function (k, el) {
+      el.addEventListener("pointerdown", function (e) {
+        el.setPointerCapture(e.pointerId); e.preventDefault();
+        function mv(ev) {
+          var r = $("stage").getBoundingClientRect(), s = scale();
+          pts[k] = [Math.max(0, Math.min(640, (ev.clientX - r.left) / s)), Math.max(0, Math.min(360, (ev.clientY - r.top) / s))];
+          $("tip").textContent = "你在自由拖动。试着让箭头看起来“躺”在路面上，再点“对准标记码”比一比。";
+          setOn("p", null); render();
+        }
+        function up() { el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", up); }
+        el.addEventListener("pointermove", mv); el.addEventListener("pointerup", up);
+      });
+    })(i, h);
+  }
+  function setOn(attr, val) {
+    document.querySelectorAll("[data-" + attr + "]").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-" + attr) === val); });
+  }
+  document.querySelectorAll("[data-t]").forEach(function (b) {
+    b.onclick = function () { $("tex").innerHTML = TEX[b.dataset.t]; setOn("t", b.dataset.t); };
+  });
+  document.querySelectorAll("[data-p]").forEach(function (b) {
+    b.onclick = function () {
+      pts = P[b.dataset.p].map(function (p) { return p.slice(); }); setOn("p", b.dataset.p);
+      $("tip").textContent = TIP[b.dataset.p]; render();
+    };
+  });
+  window.addEventListener("resize", fit);
+  $("tex").innerHTML = TEX.arrow; $("tip").textContent = TIP.marker; fit(); render();
+})();
+</script>
+</body>
+</html>

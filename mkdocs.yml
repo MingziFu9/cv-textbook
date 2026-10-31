@@ -63,6 +63,7 @@ nav:
     - "跟踪号码牌": sims/track-ids/index.md
     - "加噪与去噪": sims/diffusion-noise/index.md
     - "放大对比滑块": sims/sr-compare/index.md
+    - "增强现实贴图": sims/ar-homography/index.md
   - 学习图谱: learning-graph/index.md
   - 常见问题: faq/index.md
   - "在线模拟卷": mock-exam.md

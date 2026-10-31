@@ -55,7 +55,7 @@
 | [第 6 章 图像分割：精确到每个像素](chapters/06-segmentation/index.md) | 实验 6-1 ★ 抠图换背景 { #6-1 }<br>实验 6-2 ★ 分出可行驶路面 { #6-2 }<br>实验 6-3 ★ 点一下分割 { #6-3 }<br>实验 6-4 ☆ 谁离我更近 { #6-4 } |
 | [第 7 章 视频分析：让模型看懂动态画面](chapters/07-video/index.md) | 实验 7-1 ★ 读视频、抽帧、写视频 { #7-1 }<br>实验 7-2 ★ 行车视频跟踪与提醒 { #7-2 }<br>实验 7-3 ★ 健身计数器 { #7-3 }<br>实验 7-4 ☆ 驾驶员分心提醒 { #7-4 } |
 | [第 8 章 生成式视觉：Stable Diffusion 与图像修复](chapters/08-generative/index.md) | 实验 8-1 ★ 把模糊小图变清楚 { #8-1 }<br>实验 8-2 ★ 修补老照片 { #8-2 }<br>实验 8-3 ★ 提示词练习 { #8-3 }<br>实验 8-4 ☆ 图生图与局部重绘 { #8-4 } |
-| [第 9 章 视觉应用实战与综合项目](chapters/09-applications/index.md) | 实验 9-1 ★ 实验名称<br>实验 9-2 ★ 实验名称<br>实验 9-3 ★ 实验名称<br>实验 9-4 ★ 实验名称 |
+| [第 9 章 视觉应用实战与综合项目](chapters/09-applications/index.md) | 实验 9-1 ★ 智能辅助驾驶助手网页 { #9-1 }<br>实验 9-2 ★ 增强现实小实验 { #9-2 }<br>实验 9-3 ★ 综合项目 { #9-3 }<br>实验 9-4 ☆ 让程序跑得更快 { #9-4 } |
 
 附录：[A 零基础 Python 入门](appendix/a-python.md) · [B OpenCV 与 YOLO 速查](appendix/b-libraries.md) · [C 实验环境与数据说明](appendix/c-environment.md) · [D 术语表](appendix/glossary.md) · [E 实验报告模板与综合项目指南](appendix/e-project.md)
 <!-- toc:end -->

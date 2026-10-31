@@ -176,3 +176,17 @@ description: 本书主要术语的中英文名称、简明定义和例子，按�
 
 | 术语 | 英文 | 定义 | 例子 |
 |---|---|---|---|
+| <span id="g-增强现实"></span>增强现实 | Augmented Reality, AR | 把计算机生成的文字、图片、三维模型叠加到真实画面上，使其看起来像存在于现实中的技术 | 手机地图在路面上显示导航箭头 |
+| <span id="g-标记码"></span>标记码 | Fiducial Marker | 专门设计、便于计算机找到并识别编号和方向的黑白方块图案 | OpenCV 的 ArUco 码，DICT_4X4_50 中的 7 号码 |
+| <span id="g-单应性矩阵"></span>单应性矩阵 | Homography Matrix | 描述一个平面从一张图到另一张图透视变换关系的 3×3 矩阵，由四对对应点确定 | 把正方形的箭头图变形贴到路面上的标记码位置 |
+| <span id="g-多视角三维重建"></span>多视角三维重建 | Multi-view 3D Reconstruction | 利用从不同角度拍摄的多张照片，恢复物体或场景三维结构的方法 | 围着文物拍一圈照片，用 COLMAP 生成三维模型 |
+| <span id="g-神经辐射场"></span>神经辐射场 | Neural Radiance Fields, NeRF | 用神经网络记住空间中每个点的颜色和不透明度，从而能从任意角度画出场景画面的方法 | 用几十张照片重建一个房间，再从新角度观看 |
+| <span id="g-三维高斯泼溅"></span>三维高斯泼溅 | 3D Gaussian Splatting, 3DGS | 用大量半透明彩色椭球表示三维场景、可以快速画出新视角画面的场景重建方法 | 手机绕着拍一段视频，生成能自由转动的三维场景 |
+| <span id="g-鸟瞰图"></span>鸟瞰图 | Bird's-Eye View, BEV | 把车上多个摄像头的画面统一变换成从上往下看的俯视地图的表示方法 | 智能驾驶屏幕上显示的周围车辆示意图 |
+| <span id="g-占用网络"></span>占用网络 | Occupancy Network | 把车周围空间切成小方块，判断每个方块是否被物体占据的感知方法，不需要认出物体类别 | 发现路上掉落的纸箱并避开 |
+| <span id="g-文字识别"></span>文字识别 | Optical Character Recognition, OCR | 检测图片中文字的位置并识别出文字内容的技术 | 停车场识别车牌、拍照翻译 |
+| <span id="g-模型部署"></span>模型部署 | Model Deployment | 把训练好的模型放到实际使用的设备或服务上运行的过程 | 把检测模型做成网页，或转换后装到车载芯片上 |
+| <span id="g-ONNX"></span>ONNX | Open Neural Network Exchange | 一种通用的神经网络模型文件格式，不同框架和推理工具都能读取 | model.export(format="onnx") 生成 yolo26n.onnx |
+| <span id="g-量化"></span>量化 | Quantization | 用更少的比特存储模型参数，以降低内存和计算需求 | 把 32 位小数参数换成 8 位整数，模型约变为原来的四分之一 |
+| <span id="g-敏感个人信息"></span>敏感个人信息 | Sensitive Personal Information | 一旦泄露或被非法使用，易导致人格尊严受损或人身、财产安全受危害的个人信息 | 人脸等生物识别信息、行踪轨迹、银行账户 |
+| <span id="g-偏见"></span>偏见 | Bias | 模型对某些群体系统性地产生不公平或不准确判断的现象 | 主要用白天照片训练的检测器，夜间召回率明显偏低 |
