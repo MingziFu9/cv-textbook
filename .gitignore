@@ -18,3 +18,6 @@ labs/**/runs/
 *.pt
 *.onnx
 labs/**/output/
+labs/ch0*/lab*.jpg
+labs/ch0*/lab*.png
+labs/ch0*/lab*_output/

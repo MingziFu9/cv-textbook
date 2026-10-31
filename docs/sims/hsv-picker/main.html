@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HSV 调色板</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.pics { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width:600px) { .pics { grid-template-columns:1fr; } }
+.pics canvas { width:100%; border:1px solid var(--line); border-radius:6px; cursor:crosshair; }
+.cap { font-size:12px; color:var(--muted); text-align:center; }
+.sl { display:grid; grid-template-columns:5.5em 1fr 3em 1fr 3em; gap:6px; align-items:center; font-size:13px; margin:3px 0; }
+.sl .v { font-variant-numeric:tabular-nums; text-align:right; }
+.strip { height:10px; border-radius:3px; margin:-2px 0 4px 5.5em; }
+.mono { font-family:Consolas,monospace; }
+</style>
+</head>
+<body>
+<h1>HSV 调色板：按颜色把像素“选出来”</h1>
+<div class="sub">拖动三组滑块设定色调 H、饱和度 S、亮度 V 的范围，右图白色的就是被选中的像素（相当于 cv2.inRange 的结果）。在左图上点一下，可以看到那个点的 H、S、V。</div>
+<div class="row ex"><span class="lbl">换图：</span>
+  <button data-img="lane_yellow.jpg" class="on">黄色车道线</button><button data-img="lane_white.jpg">白色车道线</button><button data-img="night.jpg">压暗的“夜间”画面</button><button data-img="portrait.jpg">蓝底证件照</button>
+</div>
+<div class="row ex"><span class="lbl">预设范围：</span>
+  <button data-p="15,35,80,255,120,255">黄色</button><button data-p="0,180,0,40,200,255">白色</button><button data-p="100,130,100,255,50,255">蓝色</button><button data-p="0,180,0,255,0,255">全选</button>
+</div>
+<div class="sl"><span>H 色调</span><input type="range" id="h0" min="0" max="180"><span class="v" id="h0v"></span><input type="range" id="h1" min="0" max="180"><span class="v" id="h1v"></span></div>
+<div class="strip" id="hstrip"></div>
+<div class="sl"><span>S 饱和度</span><input type="range" id="s0" min="0" max="255"><span class="v" id="s0v"></span><input type="range" id="s1" min="0" max="255"><span class="v" id="s1v"></span></div>
+<div class="sl"><span>V 亮度</span><input type="range" id="v0" min="0" max="255"><span class="v" id="v0v"></span><input type="range" id="v1" min="0" max="255"><span class="v" id="v1v"></span></div>
+<div class="row"><label><input type="checkbox" id="roi" checked> 只看下半部分（感兴趣区域）</label></div>
+<div class="pics">
+  <div><canvas id="src"></canvas><div class="cap">原图（点一下看 HSV）</div></div>
+  <div><canvas id="dst"></canvas><div class="cap">选中的像素（白）</div></div>
+</div>
+<div class="msg" id="msg"></div>
+<div class="msg mono" id="code"></div>
+<div class="note">H 按 OpenCV 的习惯取 0～180（一圈 360° 除以 2），S、V 取 0～255。行车照片来自 Udacity 公开项目（MIT 许可）；证件照是编者画的卡通头像。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var src = $("src"), dst = $("dst"), sctx = src.getContext("2d", { willReadFrequently: true }), dctx = dst.getContext("2d");
+  var img = new Image(), H, S, V, W = 0, Ht = 0, ids = ["h0", "h1", "s0", "s1", "v0", "v1"];
+  function hsv(r, g, b) {                       // 与 OpenCV 的 8 位 HSV 换算一致
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
+    if (d > 0) { if (mx === r) h = 60 * (g - b) / d; else if (mx === g) h = 120 + 60 * (b - r) / d; else h = 240 + 60 * (r - g) / d; }
+    if (h < 0) h += 360;
+    return [Math.round(h / 2), mx === 0 ? 0 : Math.round(255 * d / mx), mx];
+  }
+  function load(n) { img.onload = prep; img.src = "img/" + n; }
+  function prep() {
+    W = src.width = dst.width = img.width; Ht = src.height = dst.height = img.height;
+    sctx.drawImage(img, 0, 0); var d = sctx.getImageData(0, 0, W, Ht).data;
+    H = new Uint8Array(W * Ht); S = new Uint8Array(W * Ht); V = new Uint8Array(W * Ht);
+    for (var i = 0; i < W * Ht; i++) { var t = hsv(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]); H[i] = t[0]; S[i] = t[1]; V[i] = t[2]; }
+    $("roi").checked = img.src.indexOf("portrait") < 0;
+    run();
+  }
+  function val(id) { return +$(id).value; }
+  function run() {
+    ids.forEach(function (k) { $(k + "v").textContent = $(k).value; });
+    if (!W) return;
+    var h0 = val("h0"), h1 = val("h1"), s0 = val("s0"), s1 = val("s1"), v0 = val("v0"), v1 = val("v1");
+    var y0 = $("roi").checked ? Math.floor(Ht / 2 + Ht * 50 / 540) : 0, out = dctx.createImageData(W, Ht), n = 0, tot = 0;
+    for (var y = 0; y < Ht; y++) for (var x = 0; x < W; x++) {
+      var i = y * W + x, on = y >= y0 && H[i] >= h0 && H[i] <= h1 && S[i] >= s0 && S[i] <= s1 && V[i] >= v0 && V[i] <= v1;
+      if (y >= y0) tot++; if (on) n++;
+      var c = on ? 255 : (y < y0 ? 40 : 0);
+      out.data[i * 4] = out.data[i * 4 + 1] = out.data[i * 4 + 2] = c; out.data[i * 4 + 3] = 255;
+    }
+    dctx.putImageData(out, 0, 0);
+    $("msg").innerHTML = "选中 <b>" + n.toLocaleString() + "</b> 个像素，占所看区域的 <b>" + (100 * n / tot).toFixed(1) + "%</b>";
+    $("code").textContent = "mask = cv2.inRange(hsv, (" + h0 + ", " + s0 + ", " + v0 + "), (" + h1 + ", " + s1 + ", " + v1 + "))";
+    var g = []; for (var k = 0; k <= 12; k++) g.push("hsl(" + (k * 30) + ",90%,50%) " + (k * 100 / 12) + "%");
+    $("hstrip").style.background = "linear-gradient(90deg," + g.join(",") + ")";
+  }
+  function preset(p) { p.split(",").forEach(function (v, k) { $(ids[k]).value = v; }); run(); }
+  src.addEventListener("click", function (e) {
+    var b = src.getBoundingClientRect(), x = Math.floor((e.clientX - b.left) / b.width * W), y = Math.floor((e.clientY - b.top) / b.height * Ht), i = y * W + x;
+    var p = sctx.getImageData(x, y, 1, 1).data;
+    $("msg").innerHTML = "第 " + y + " 行、第 " + x + " 列：红 " + p[0] + " 绿 " + p[1] + " 蓝 " + p[2] + " → <b>H " + H[i] + "，S " + S[i] + "，V " + V[i] + "</b>";
+  });
+  ids.forEach(function (k) { $(k).oninput = run; }); $("roi").onchange = run;
+  document.querySelectorAll("[data-img]").forEach(function (b) { b.onclick = function () {
+    document.querySelectorAll("[data-img]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); load(b.dataset.img); }; });
+  document.querySelectorAll("[data-p]").forEach(function (b) { b.onclick = function () { preset(b.dataset.p); }; });
+  preset("15,35,80,255,120,255"); load("lane_yellow.jpg");
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

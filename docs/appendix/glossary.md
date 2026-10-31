@@ -36,6 +36,24 @@ description: 本书主要术语的中英文名称、简明定义和例子，按�
 
 | 术语 | 英文 | 定义 | 例子 |
 |---|---|---|---|
+| <span id="g-图像处理"></span>图像处理 | Image Processing | 对图片做裁剪、缩放、调色、去噪等加工，输出仍是一张图片 | 把夜间行车画面调亮 |
+| <span id="g-感兴趣区域"></span>感兴趣区域 | Region of Interest, ROI | 只对图片中有用的一块区域做处理，其余部分不管 | 找车道线时只看画面下半部分的路面 |
+| <span id="g-插值"></span>插值 | Interpolation | 缩放图片时，根据周围已有像素估算新像素值的方法 | 放大照片时用双线性插值让边缘更平滑 |
+| <span id="g-颜色空间"></span>颜色空间 | Color Space | 用几个数描述颜色的一套方法，常见的有 RGB、灰度、HSV | 把照片从 BGR 换到 HSV 再找黄色 |
+| <span id="g-HSV"></span>HSV | Hue Saturation Value | 用色调、饱和度、亮度三个数描述颜色的方法，更接近人说颜色的方式；OpenCV 中 H 取 0～180 | 黄色车道线的 H 约为 20～30 |
+| <span id="g-掩膜"></span>掩膜 | Mask | 和原图一样大的黑白图，白色（255）表示选中的像素，黑色（0）表示没选中 | cv2.inRange 找出的蓝色背景 |
+| <span id="g-对比度"></span>对比度 | Contrast | 图片中亮的地方和暗的地方相差多少，相差越大越“鲜明” | 雾天照片对比度低，看起来发灰 |
+| <span id="g-直方图"></span>直方图 | Histogram | 统计图片中每个亮度值各有多少个像素的柱状图，用来判断图片偏亮还是偏暗 | 夜间画面的直方图挤在左边 |
+| <span id="g-直方图均衡化"></span>直方图均衡化 | Histogram Equalization | 把挤在一起的亮度值拉开、铺满 0～255 的方法，能让偏暗或发灰的图片看得更清 | cv2.equalizeHist 把夜间画面的平均亮度从 24 拉到 93 |
+| <span id="g-噪声"></span>噪声 | Noise | 图片中不属于真实画面、随机出现的亮点、暗点或颗粒 | 夜里拍照时画面上的彩色小颗粒 |
+| <span id="g-滤波"></span>滤波 | Filtering | 用每个像素周围一小块（窗口）里的像素重新算出它的值，常用来去噪或模糊 | 用 3×3 窗口做中值滤波去掉噪点 |
+| <span id="g-中值滤波"></span>中值滤波 | Median Filter | 把窗口里的像素值从小到大排好，取正中间那个作为新值的滤波方法，特别适合去除椒盐噪声 | cv2.medianBlur(img, 3) |
+| <span id="g-高斯滤波"></span>高斯滤波 | Gaussian Filter | 按“离中心越近权重越大”给窗口里的像素加权平均的滤波方法 | cv2.GaussianBlur(img, (5, 5), 0) |
+| <span id="g-阈值"></span>阈值 | Threshold | 用来划分两类像素的分界值（门槛） | 亮度大于 127 的算白，否则算黑 |
+| <span id="g-二值化"></span>二值化 | Binarization | 按阈值把图片变成只有黑（0）、白（255）两种值的图片 | 把药片照片变成白药片、黑桌面 |
+| <span id="g-图像预处理"></span>图像预处理 | Image Preprocessing | 在把图片交给模型或算法之前，统一尺寸、调整亮度、去噪等准备工作 | YOLO 先把照片缩放到 640 像素再识别 |
+| <span id="g-函数"></span>函数 | Function | 把一段做好某件事的代码打包起来、起个名字，以后用名字就能反复调用 | def process(path): 处理一张图片 |
+| <span id="g-循环"></span>循环 | Loop | 让一段代码对一组东西逐个重复执行的写法，Python 中常用 for | for f in files: 依次处理每张照片 |
 
 ## 第 3 章 图像特征：从边缘到卷积
 

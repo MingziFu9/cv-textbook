@@ -49,6 +49,8 @@ nav:
   - 交互动画:
     - sims/index.md
     - "像素放大镜": sims/pixel-zoom/index.md
+    - "滤波器对比": sims/filter-compare/index.md
+    - "HSV 调色板": sims/hsv-picker/index.md
   - 学习图谱: learning-graph/index.md
   - 常见问题: faq/index.md
   - "在线模拟卷": mock-exam.md
