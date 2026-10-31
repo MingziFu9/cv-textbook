@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>放大对比滑块</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.stage { position:relative; width:100%; aspect-ratio:400/160; border:1px solid var(--line); border-radius:6px; overflow:hidden; cursor:ew-resize; user-select:none; touch-action:none; }
+.stage img { position:absolute; inset:0; width:100%; height:100%; image-rendering:auto; }
+#rightWrap { position:absolute; inset:0; overflow:hidden; }
+#bar { position:absolute; top:0; bottom:0; width:3px; background:#ffeb3b; box-shadow:0 0 4px #000; }
+.tag { position:absolute; top:6px; padding:2px 6px; background:rgba(0,0,0,.6); color:#fff; font-size:13px; border-radius:3px; }
+#small { image-rendering:pixelated; width:100px; height:40px; border:1px solid var(--line); vertical-align:middle; }
+</style>
+</head>
+<body>
+<h1>放大对比：插值还是超分辨率</h1>
+<div class="sub">一张 100×40 的小图放大 4 倍。左右拖动黄线，对比两种方法；最后和“原图”（标准答案）比一比，看超分辨率“猜”出的细节对不对。</div>
+<div class="row ex"><span class="lbl">画面：</span><button data-k="street" class="on">城市街道</button><button data-k="crossing">行人过马路</button>
+  <span class="lbl" style="margin-left:10px">小图：</span><img id="small" alt="原始小图"></div>
+<div class="row ex"><span class="lbl">左边：</span><button data-l="nearest">最近邻</button><button data-l="bicubic" class="on">双三次</button><button data-l="sr">超分辨率</button><button data-l="original">原图</button></div>
+<div class="row ex"><span class="lbl">右边：</span><button data-r="nearest">最近邻</button><button data-r="bicubic">双三次</button><button data-r="sr" class="on">超分辨率</button><button data-r="original">原图</button></div>
+<div class="stage" id="stage">
+  <img id="L" alt="左边">
+  <div id="rightWrap"><img id="R" alt="右边"></div>
+  <div id="bar"></div><span class="tag" id="tl" style="left:6px"></span><span class="tag" id="tr" style="right:6px"></span>
+</div>
+<div class="note" id="tip"></div>
+<div class="note">数据：编者把 KITTI 照片中 400×160 的一块缩小到 100×40，再分别用 OpenCV 最近邻、双三次插值和 Real-ESRGAN 轻量模型（realesr-general-x4v3）放大 4 倍，与实验 8-1 相同。照片 CC BY-NC-SA 3.0。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, key = "street", L = "bicubic", R = "sr", pos = 0.5;
+  var NAME = { nearest: "最近邻", bicubic: "双三次", sr: "超分辨率 Real-ESRGAN", original: "原图（标准答案）" };
+  var TIP = {
+    "bicubic|sr": "超分辨率的边缘明显更锐利，车窗、车身轮廓清楚；双三次整体发糊。但再把右边换成“原图”看看：超分辨率画出的车牌、车窗细节和原图并不一样，那是模型“猜”的。",
+    "nearest|sr": "最近邻把每个像素复制成 4×4 的小方块，马赛克感很强；超分辨率没有方块，边缘平滑锐利。",
+    "sr|original": "仔细看车牌和远处的车：超分辨率画得很“清楚”，但字和形状与原图不同。它能让照片好看，不能当作证据还原真实细节。"
+  };
+  function show() {
+    $("L").src = "img/" + key + "_" + L + ".png"; $("R").src = "img/" + key + "_" + R + ".png"; $("small").src = "img/" + key + "_small.png";
+    $("tl").textContent = NAME[L]; $("tr").textContent = NAME[R];
+    $("rightWrap").style.clipPath = "inset(0 0 0 " + (pos * 100) + "%)"; $("bar").style.left = "calc(" + (pos * 100) + "% - 1px)";
+    $("tip").textContent = TIP[[L, R].sort(function (a, b) { return ["nearest", "bicubic", "sr", "original"].indexOf(a) - ["nearest", "bicubic", "sr", "original"].indexOf(b); }).join("|")] || "左右拖动黄线比较两种结果。";
+  }
+  function drag(e) { var r = $("stage").getBoundingClientRect(), x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left; pos = Math.max(0, Math.min(1, x / r.width)); show(); }
+  var down = false;
+  $("stage").addEventListener("pointerdown", function (e) { down = true; drag(e); });
+  window.addEventListener("pointermove", function (e) { if (down) drag(e); });
+  window.addEventListener("pointerup", function () { down = false; });
+  function group(attr, set) { document.querySelectorAll("[data-" + attr + "]").forEach(function (b) { b.onclick = function () {
+    document.querySelectorAll("[data-" + attr + "]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); set(b.dataset[attr]); show(); }; }); }
+  group("k", function (v) { key = v; }); group("l", function (v) { L = v; }); group("r", function (v) { R = v; });
+  show();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

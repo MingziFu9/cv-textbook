@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>加噪与去噪</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+canvas { width:100%; border:1px solid var(--line); border-radius:6px; image-rendering:auto; }
+.strip { display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; margin-top:6px; }
+.strip canvas { cursor:pointer; }
+.strip div { text-align:center; font-size:12px; color:var(--muted); }
+.meter { display:flex; height:18px; border-radius:4px; overflow:hidden; margin:6px 0; font-size:12px; color:#fff; }
+.meter span { display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; }
+.row input[type=range] { flex:1; }
+</style>
+</head>
+<body>
+<h1>扩散模型：加噪与去噪</h1>
+<div class="sub">训练时，把一张照片一步步加噪声，直到变成一片雪花；模型的任务是学会“看一张带噪声的图，猜出里面的噪声”。生成时反过来：从纯噪声出发，每一步减掉猜出的噪声，一张图就慢慢“洗”出来了。</div>
+<div class="row ex"><span class="lbl">方向：</span><button data-d="fwd" class="on">加噪（训练时）</button><button data-d="rev">去噪（生成时）</button>
+  <button id="play" style="margin-left:10px">▶ 播放</button><button id="seed">换一组噪声</button></div>
+<div class="row"><span class="lbl">第几步</span><input type="range" id="t" min="0" max="1000" value="0"><span class="mono big" id="tv"></span></div>
+<div class="meter"><span id="ms" style="background:#43a047"></span><span id="mn" style="background:#757575"></span></div>
+<canvas id="cv" width="320" height="180"></canvas>
+<div class="strip" id="strip"></div>
+<div class="note" id="cap"></div>
+<div class="note">说明：这里用的是常见的线性噪声表，共 1000 步，第 t 步的图 = √ᾱ × 原图 + √(1−ᾱ) × 噪声（ᾱ 随 t 增大从 1 降到接近 0）。“去噪”方向为了演示，假设模型每一步都准确猜出了噪声；真实模型猜得不完全准，所以同一个提示词每次生成的图不一样。照片来自 Udacity 行车视频（MIT）。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, T = 1000, dir = "fwd", timer = null, seed = 1, x0, eps, W = 320, H = 180;
+  var ab = [], a = 1; for (var t = 0; t <= T; t++) { if (t > 0) a *= 1 - (1e-4 + (0.02 - 1e-4) * (t - 1) / (T - 1)); ab.push(a); }
+  var img = new Image(), cv = $("cv"), ctx = cv.getContext("2d");
+  function rng(s) { return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
+  function makeNoise() { var r = rng(seed * 7919 + 17), n = new Float32Array(W * H * 3);
+    for (var i = 0; i < n.length; i += 2) { var u = Math.max(r(), 1e-9), v = r(), m = Math.sqrt(-2 * Math.log(u)); n[i] = m * Math.cos(6.2832 * v); if (i + 1 < n.length) n[i + 1] = m * Math.sin(6.2832 * v); }
+    eps = n; }
+  function render(c, t) { var x = c.getContext("2d"), d = x.createImageData(W, H), s = Math.sqrt(ab[t]), q = Math.sqrt(1 - ab[t]);
+    for (var p = 0, j = 0; p < W * H; p++) { for (var k = 0; k < 3; k++, j++) d.data[p * 4 + k] = ((s * x0[j] + q * eps[j]) + 1) * 127.5; d.data[p * 4 + 3] = 255; }
+    x.putImageData(d, 0, 0); }
+  function draw() {
+    if (!x0) return; var t = +$("t").value, s = Math.sqrt(ab[t]);
+    render(cv, t);
+    $("tv").textContent = (dir === "fwd" ? "加噪第 " + t + " 步" : "去噪还剩 " + t + " 步");
+    var sp = Math.round(s * s * 100); $("ms").style.width = sp + "%"; $("mn").style.width = (100 - sp) + "%";
+    $("ms").textContent = sp > 8 ? "原图 " + sp + "%" : ""; $("mn").textContent = 100 - sp > 8 ? "噪声 " + (100 - sp) + "%" : "";
+    $("cap").textContent = dir === "fwd"
+      ? (sp >= 90 ? "前面几步只加了一点点噪声，几乎看不出来。" : sp >= 20 ? "噪声越来越多，但车道线、天空、山的大致轮廓还在。模型训练时，就是看这样的图去猜噪声。" : sp >= 2 ? "已经很难看出原图了，只剩模糊的明暗分布。" : "几乎是纯噪声。生成图片就从这样的“雪花”开始。")
+      : (sp < 2 ? "从纯噪声出发。真实生成时，这一步的噪声是随机的，随机种子决定它长什么样。" : sp < 20 ? "先出现的是大块的明暗和颜色：上面亮（天空）、下面暗（路面）。" : sp < 90 ? "构图已经定下来，开始出现车道线、山的轮廓等细节。" : "最后几步只修细节。图生成完了。");
+  }
+  function strip() { var box = $("strip"); box.innerHTML = "";
+    [0, 250, 500, 750, 1000].forEach(function (t) { var d = document.createElement("div"), c = document.createElement("canvas"); c.width = W; c.height = H; render(c, t);
+      c.onclick = function () { $("t").value = dir === "fwd" ? t : t; draw(); }; d.appendChild(c); d.appendChild(document.createTextNode("第 " + t + " 步")); box.appendChild(d); }); }
+  $("t").oninput = draw;
+  $("play").onclick = function () {
+    if (timer) { clearInterval(timer); timer = null; this.textContent = "▶ 播放"; return; }
+    this.textContent = "⏸ 暂停"; var btn = this;
+    $("t").value = dir === "fwd" ? 0 : T;
+    timer = setInterval(function () { var t = +$("t").value + (dir === "fwd" ? 10 : -10);
+      if (t < 0 || t > T) { clearInterval(timer); timer = null; btn.textContent = "▶ 播放"; return; } $("t").value = t; draw(); }, 40);
+  };
+  $("seed").onclick = function () { seed++; makeNoise(); strip(); draw(); };
+  document.querySelectorAll("[data-d]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-d]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); dir = b.dataset.d; $("t").value = dir === "fwd" ? 0 : T; draw(); }; });
+  img.onload = function () { var c = document.createElement("canvas"); c.width = W; c.height = H; var x = c.getContext("2d"); x.drawImage(img, 0, 0); var d = x.getImageData(0, 0, W, H).data;
+    x0 = new Float32Array(W * H * 3); for (var p = 0, j = 0; p < W * H; p++) for (var k = 0; k < 3; k++, j++) x0[j] = d[p * 4 + k] / 127.5 - 1;
+    makeNoise(); strip(); draw(); };
+  img.src = "img/road.png";
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

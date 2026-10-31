@@ -27,3 +27,4 @@ labs/ch0*/lab*_crops/
 labs/data/**/*.cache
 labs/ch0*/lab*_frames/
 labs/ch0*/lab*_check/
+*.pth

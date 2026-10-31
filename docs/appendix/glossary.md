@@ -157,6 +157,20 @@ description: 本书主要术语的中英文名称、简明定义和例子，按�
 
 | 术语 | 英文 | 定义 | 例子 |
 |---|---|---|---|
+| <span id="g-文生图"></span>文生图 | Text-to-Image | 根据一段文字描述生成一张新图片 | 输入“雨天的路口”生成一张雨天路口照片 |
+| <span id="g-图生图"></span>图生图 | Image-to-Image | 以一张图片为起点，按文字描述修改风格或内容，同时保留大致构图 | 把晴天的高速公路改成雪天 |
+| <span id="g-局部重绘"></span>局部重绘 | Inpainting with Diffusion | 只在遮罩区域内按文字描述重新生成，其他区域不变 | 把右下角的黑色轿车换成红色皮卡 |
+| <span id="g-图像修复"></span>图像修复 | Image Inpainting | 根据周围内容填补图片中缺损或被遮挡的区域 | 用 cv2.inpaint 修补老照片的划痕 |
+| <span id="g-超分辨率"></span>超分辨率 | Super-Resolution | 把低分辨率图片放大并补出细节，使其看起来更清楚的技术 | Real-ESRGAN 把 100×40 的小图放大到 400×160 |
+| <span id="g-生成对抗网络"></span>生成对抗网络 | Generative Adversarial Network, GAN | 由生成器和判别器两个网络互相对抗训练、生成逼真样本的模型 | 生成以假乱真的人脸照片 |
+| <span id="g-扩散模型"></span>扩散模型 | Diffusion Model | 训练时学会从带噪声的图中猜出噪声，生成时从纯噪声出发一步步去噪得到新图的生成模型 | Stable Diffusion 用 25 步去噪生成一张图 |
+| <span id="g-潜空间"></span>潜空间 | Latent Space | 把图片压缩后的小尺寸表示空间，在其中做扩散可以大大减少计算量 | 512×512 的图压成 64×64 的潜空间表示 |
+| <span id="g-提示词"></span>提示词 | Prompt | 给模型的指令和输入，在文生图中是对想要画面的文字描述 | a city street intersection, heavy rain, realistic photo |
+| <span id="g-反向提示词"></span>反向提示词 | Negative Prompt | 告诉生成模型不想要哪些内容的文字 | blurry, low quality, text, watermark |
+| <span id="g-引导强度"></span>引导强度 | Guidance Scale | 生成时多大程度上听从提示词的参数，太低跑题、太高生硬 | 常用 7～8 |
+| <span id="g-随机种子"></span>随机种子 | Random Seed | 决定随机数起点的整数；在扩散模型中决定起始噪声，种子相同则结果可以复现 | manual_seed(42) |
+| <span id="g-顶帽运算"></span>顶帽运算 | Top-hat Transform | 原图减去开运算结果，提取比周围亮的细小结构的形态学操作 | 实验 8-2 用它自动找白色划痕 |
+| <span id="g-深度合成"></span>深度合成 | Deep Synthesis | 利用深度学习等技术生成或编辑文本、图像、音频、视频的技术 | AI 换脸、AI 配音、AI 写作 |
 
 ## 第 9 章 视觉应用实战与综合项目
 

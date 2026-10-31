@@ -61,6 +61,8 @@ nav:
     - "三种分割对比": sims/seg-types/index.md
     - "动作是一段时间": sims/action-timeline/index.md
     - "跟踪号码牌": sims/track-ids/index.md
+    - "加噪与去噪": sims/diffusion-noise/index.md
+    - "放大对比滑块": sims/sr-compare/index.md
   - 学习图谱: learning-graph/index.md
   - 常见问题: faq/index.md
   - "在线模拟卷": mock-exam.md
