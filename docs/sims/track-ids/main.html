@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>跟踪号码牌</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+canvas { width:100%; border:1px solid var(--line); border-radius:6px; background:#555; }
+.stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:8px; }
+@media (max-width:600px) { .stats { grid-template-columns:repeat(2, 1fr); } }
+.stat { border:1px solid var(--line); border-radius:6px; padding:4px 6px; text-align:center; }
+.stat b { display:block; font-size:20px; }
+.stat span { font-size:12px; color:var(--muted); }
+.row input[type=range] { flex:1; }
+</style>
+</head>
+<body>
+<h1>跟踪号码牌：ID 怎样保持不变</h1>
+<div class="sub">检测器每一帧只给出“这里有个车”的框，跟踪器负责把这一帧的框和上一帧的车对上号。车开到桥下被挡住、或者某一帧漏检时，号码牌能不能保持不变？</div>
+<div class="row ex"><span class="lbl">跟踪方法：</span><button data-m="iou">只看重叠</button><button data-m="pred" class="on">预测位置 + 记住几帧</button>
+  <button id="play" style="margin-left:12px">▶ 播放</button><button id="reset">从头开始</button></div>
+<div class="row"><span class="lbl">丢失后记住</span><input type="range" id="mem" min="0" max="60" value="45"><span class="mono" id="memv"></span></div>
+<div class="row"><span class="lbl">检测器漏检率</span><input type="range" id="miss" min="0" max="40" value="10"><span class="mono" id="missv"></span>
+  <label style="margin-left:10px"><input type="checkbox" id="occ" checked> 桥遮挡</label></div>
+<div class="row"><span class="lbl">帧</span><input type="range" id="t" min="0" max="359" value="0"><span class="mono" id="tv"></span></div>
+<canvas id="cv" width="760" height="300"></canvas>
+<div class="stats">
+  <div class="stat"><b id="real">5</b><span>真实车辆</span></div>
+  <div class="stat"><b id="ids"></b><span>出现过的号码牌</span></div>
+  <div class="stat"><b id="sw" class="bad"></b><span>换号次数</span></div>
+  <div class="stat"><b id="cnt"></b><span>过线计数（黄线）</span></div>
+</div>
+<div class="note">这是一个模拟：5 辆车在三条车道上从左往右开，中间有一座桥（深色带），车在桥下时检测器看不见；另外每一帧有一定概率随机漏检。虚线框是车的真实位置，实线框是跟踪器给的号码牌。真实的跟踪器（如 ByteTrack、BoT-SORT）思路相同：先按运动预测每辆车这一帧应该在哪，再按交并比和检测框配对，配不上的先“记住”几帧再删除。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, mode = "pred", timer = null, sim = null;
+  var cv = $("cv"), ctx = cv.getContext("2d"), W = 760, H = 300, BR = [340, 410], LINE = 600, T = 360;
+  var CARS = [[-60, 70, 2.6], [-200, 150, 3.4], [-40, 230, 2.2], [-420, 70, 3.0], [-600, 230, 3.4]];   // 起点 x、车道 y、速度
+  var COL = ["#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe", "#008080", "#e6beff", "#9a6324", "#fffac8", "#800000"];
+  function rand(i) { var x = Math.sin(i * 91.17 + 7.31) * 43758.5453; return x - Math.floor(x); }
+  function iou(a, b) { var w = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), h = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = w * h;
+    return i / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i); }
+  function run() {   // 从第 0 帧模拟到最后一帧，记录每一帧的状态
+    var mem = mode === "iou" ? 0 : +$("mem").value, miss = +$("miss").value / 100, occ = $("occ").checked;
+    var tracks = [], nextId = 1, frames = [], counted = {}, count = 0, owners = {}, switches = 0;
+    for (var t = 0; t < T; t++) {
+      var truth = CARS.map(function (c) { var x = c[0] + c[2] * t; return [x - 30, c[1] - 18, x + 30, c[1] + 18]; });
+      var dets = [];
+      truth.forEach(function (b, k) { var cx = (b[0] + b[2]) / 2;
+        if (b[2] < 0 || b[0] > W) return; if (occ && cx > BR[0] && cx < BR[1]) return; if (rand(t * 7 + k) < miss) return;
+        var j = (rand(t * 13 + k) - 0.5) * 4; dets.push({ box: [b[0] + j, b[1] + j, b[2] + j, b[3] + j], car: k }); });
+      tracks.forEach(function (tr) { tr.pred = mode === "pred" ? tr.box.map(function (v, i) { return v + (i % 2 === 0 ? tr.vx * (tr.lost + 1) : 0); }) : tr.box; });
+      var used = {};
+      tracks.forEach(function (tr) { var best = -1, bi = 0.3;
+        dets.forEach(function (d, i) { if (!used[i]) { var v = iou(tr.pred, d.box); if (v > bi) { bi = v; best = i; } } });
+        if (best >= 0) { var d = dets[best]; used[best] = 1;
+          var vx = (d.box[0] - tr.box[0]) / (tr.lost + 1); tr.vx = tr.hits ? 0.7 * tr.vx + 0.3 * vx : vx;
+          tr.box = d.box; tr.lost = 0; tr.hits++; tr.car = d.car; tr.trail.push([(d.box[0] + d.box[2]) / 2, (d.box[1] + d.box[3]) / 2]);
+        } else { tr.lost++; } });
+      tracks = tracks.filter(function (tr) { return tr.lost <= mem; });
+      dets.forEach(function (d, i) { if (!used[i]) {
+        if (owners[d.car] !== undefined) switches++;
+        tracks.push({ id: nextId++, box: d.box, vx: 0, lost: 0, hits: 0, car: d.car, trail: [[(d.box[0] + d.box[2]) / 2, (d.box[1] + d.box[3]) / 2]] }); } });
+      tracks.forEach(function (tr) { if (tr.lost === 0) { owners[tr.car] = tr.id; var n = tr.trail.length;
+        if (n > 1 && tr.trail[n - 2][0] < LINE && tr.trail[n - 1][0] >= LINE && !counted[tr.id]) { counted[tr.id] = 1; count++; } } });
+      frames.push({ truth: truth, tracks: tracks.map(function (tr) { return { id: tr.id, box: tr.box.slice(), pred: tr.pred ? tr.pred.slice() : tr.box.slice(), lost: tr.lost, trail: tr.trail.slice(-60) }; }),
+                    ids: nextId - 1, switches: switches, count: count });
+    }
+    return frames;
+  }
+  function draw() {
+    if (!sim) sim = run();
+    var t = +$("t").value, f = sim[t], occ = $("occ").checked;
+    $("memv").textContent = (mode === "iou" ? 0 : $("mem").value) + " 帧"; $("missv").textContent = $("miss").value + "%"; $("tv").textContent = t;
+    $("mem").disabled = mode === "iou";
+    ctx.fillStyle = "#5b5b5b"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#ddd"; ctx.setLineDash([18, 14]); ctx.lineWidth = 2; [110, 190].forEach(function (y) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); });
+    ctx.setLineDash([]); ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(LINE, 20); ctx.lineTo(LINE, H - 20); ctx.stroke();
+    ctx.fillStyle = "#ffeb3b"; ctx.font = "13px sans-serif"; ctx.fillText("计数线", LINE + 4, 16);
+    ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.strokeStyle = "rgba(255,255,255,.7)";
+    f.truth.forEach(function (b) { ctx.strokeRect(b[0], b[1], b[2] - b[0], b[3] - b[1]); });
+    ctx.setLineDash([]);
+    f.tracks.forEach(function (tr) { var c = COL[(tr.id - 1) % COL.length];
+      ctx.strokeStyle = c; ctx.globalAlpha = 0.6; ctx.lineWidth = 2; ctx.beginPath(); tr.trail.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); ctx.globalAlpha = 1;
+      var b = tr.lost ? tr.pred : tr.box; ctx.lineWidth = 3; if (tr.lost) ctx.setLineDash([2, 4]);
+      ctx.strokeRect(b[0], b[1], b[2] - b[0], b[3] - b[1]); ctx.setLineDash([]);
+      ctx.fillStyle = c; ctx.fillRect(b[0], b[1] - 16, 44, 16); ctx.fillStyle = "#000"; ctx.font = "bold 12px sans-serif"; ctx.fillText("ID " + tr.id, b[0] + 3, b[1] - 4);
+      if (tr.lost) { ctx.fillStyle = "#fff"; ctx.font = "11px sans-serif"; ctx.fillText("记住中 " + tr.lost, b[0] + 2, b[3] + 12); } });
+    if (occ) { ctx.fillStyle = "rgba(40,40,40,.88)"; ctx.fillRect(BR[0], 0, BR[1] - BR[0], H); ctx.fillStyle = "#bbb"; ctx.font = "13px sans-serif"; ctx.fillText("桥", (BR[0] + BR[1]) / 2 - 6, H / 2); }
+    $("ids").textContent = f.ids; $("sw").textContent = f.switches; $("cnt").textContent = f.count;
+    $("ids").className = f.ids > 5 ? "bad" : "ok";
+  }
+  function reset() { sim = null; draw(); }
+  $("play").onclick = function () {
+    if (timer) { clearInterval(timer); timer = null; this.textContent = "▶ 播放"; return; }
+    this.textContent = "⏸ 暂停"; timer = setInterval(function () { var t = +$("t").value + 1; if (t >= T) t = 0; $("t").value = t; draw(); }, 40);
+  };
+  $("reset").onclick = function () { $("t").value = 0; draw(); };
+  $("t").oninput = draw; $("mem").oninput = reset; $("miss").oninput = reset; $("occ").onchange = reset;
+  document.querySelectorAll("[data-m]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-m]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); mode = b.dataset.m; reset(); }; });
+  draw();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

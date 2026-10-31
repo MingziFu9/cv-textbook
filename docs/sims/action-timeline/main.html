@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>动作是一段时间</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.wrap { display:grid; grid-template-columns:240px 1fr; gap:10px; align-items:start; }
+@media (max-width:640px) { .wrap { grid-template-columns:1fr; } #pic { max-width:240px; } }
+canvas { width:100%; border:1px solid var(--line); border-radius:6px; }
+.stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:8px; }
+.stat { border:1px solid var(--line); border-radius:6px; padding:4px 6px; text-align:center; }
+.stat b { display:block; font-size:20px; }
+.stat span { font-size:12px; color:var(--muted); }
+.row input[type=range] { flex:1; }
+</style>
+</head>
+<body>
+<h1>动作是一段时间：俯卧撑计数</h1>
+<div class="sub">只看一帧，分不清是在“往下压”还是“往上撑”。把右臂肘关节的角度连成一条曲线，压下（低于红线）再撑起（高于绿线）才算一个。加一点关键点“抖动”，看看“连续几帧”规则有什么用。</div>
+<div class="row"><button id="play">▶ 播放</button><span class="lbl">帧</span><input type="range" id="t" min="0" max="299" value="0"><span class="mono" id="tv"></span></div>
+<div class="wrap">
+  <canvas id="pic" width="240" height="288"></canvas>
+  <div>
+    <canvas id="chart" width="720" height="260"></canvas>
+    <div class="row"><span class="lbl" style="color:#2e7d32">撑起门槛</span><input type="range" id="up" min="100" max="170" value="140"><span class="mono" id="upv"></span></div>
+    <div class="row"><span class="lbl" style="color:#c62828">压下门槛</span><input type="range" id="down" min="60" max="140" value="100"><span class="mono" id="downv"></span></div>
+    <div class="row"><span class="lbl">连续几帧才算</span><input type="range" id="n" min="1" max="10" value="3"><span class="mono" id="nv"></span></div>
+    <div class="row"><span class="lbl">关键点抖动</span><input type="range" id="noise" min="0" max="30" value="0"><span class="mono" id="noisev"></span></div>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat"><b id="ang"></b><span>当前肘角</span></div>
+  <div class="stat"><b id="st"></b><span>当前状态</span></div>
+  <div class="stat"><b id="cnow" class="ok"></b><span>数到现在</span></div>
+  <div class="stat"><b id="call"></b><span>整段视频（真实 5 个）</span></div>
+</div>
+<div class="note">数据：编者用 yolo26n-pose 对 2 秒的俯卧撑示例视频（Ultralytics，一次完整动作，30 帧/秒）逐帧找关键点，角度是右肩-右肘-右腕的夹角；把这 2 秒首尾相接重复 5 次，与实验 7-3 的 pushup_5reps.mp4 相同。“抖动”是在角度上加的随机偏差，模拟光线差、衣服遮挡时关键点跳来跳去。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, D, sheet = new Image(), N = 300, base = [], ang = [], timer = null;
+  var pic = $("pic").getContext("2d"), ch = $("chart"), cx = ch.getContext("2d");
+  function angle(a, b, c) { var x1 = a[0] - b[0], y1 = a[1] - b[1], x2 = c[0] - b[0], y2 = c[1] - b[1];
+    var cos = (x1 * x2 + y1 * y2) / Math.hypot(x1, y1) / Math.hypot(x2, y2); return Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI; }
+  function rnd(i) { var x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return (x - Math.floor(x)) * 2 - 1; }   // 固定的“随机数”
+  function count(upto) {
+    var UP = +$("up").value, DOWN = +$("down").value, n = +$("n").value, state = "up", streak = 0, c = 0, marks = [], states = [];
+    for (var i = 0; i < N; i++) { var a = ang[i], want = null;
+      if (state === "up" && a < DOWN) want = "down"; else if (state === "down" && a > UP) want = "up";
+      streak = want ? streak + 1 : 0;
+      if (streak >= n) { state = want; streak = 0; if (state === "up") { c++; marks.push(i); } }
+      states.push(state); }
+    return { marks: marks, states: states };
+  }
+  function draw() {
+    if (!D) return;
+    var t = +$("t").value, noise = +$("noise").value;
+    ["up", "down", "n", "noise"].forEach(function (k) { $(k + "v").textContent = $(k).value + (k === "n" ? " 帧" : k === "noise" ? "°" : "°"); });
+    ang = base.map(function (a, i) { return a + noise * rnd(i); });
+    var res = count(), f = t % D.n, k = D.kp[f];
+    $("tv").textContent = t + "（" + (t / D.fps).toFixed(1) + " 秒）";
+    pic.drawImage(sheet, f * D.w, 0, D.w, D.h, 0, 0, 240, 288);
+    pic.lineWidth = 4; pic.strokeStyle = "#ffeb3b"; pic.beginPath(); pic.moveTo(k[0][0], k[0][1]); pic.lineTo(k[1][0], k[1][1]); pic.lineTo(k[2][0], k[2][1]); pic.stroke();
+    [0, 1, 2].forEach(function (j) { pic.beginPath(); pic.arc(k[j][0], k[j][1], 5, 0, 7); pic.fillStyle = j === 1 ? "#e53935" : "#fff"; pic.fill(); });
+    pic.font = "bold 18px sans-serif"; pic.fillStyle = "#e53935"; pic.fillText(Math.round(ang[t]) + "°", k[1][0] + 8, k[1][1] + 22);
+    // 曲线
+    var W = ch.width, H = ch.height, L = 36, B = 22, sx = function (i) { return L + i * (W - L - 6) / (N - 1); }, sy = function (a) { return H - B - (a - 40) * (H - B - 8) / 150; };
+    cx.clearRect(0, 0, W, H); cx.font = "12px sans-serif"; cx.fillStyle = "#888";
+    for (var a = 60; a <= 180; a += 40) { cx.fillText(a + "°", 2, sy(a) + 4); cx.strokeStyle = "#eee"; cx.beginPath(); cx.moveTo(L, sy(a)); cx.lineTo(W, sy(a)); cx.stroke(); }
+    for (var s = 0; s <= 10; s += 2) cx.fillText(s + "s", sx(s * D.fps) - 6, H - 6);
+    cx.fillStyle = "rgba(198,40,40,.08)";
+    res.states.forEach(function (st, i) { if (st === "down") cx.fillRect(sx(i), 8, sx(1) - sx(0) + 0.5, H - B - 8); });
+    [[+$("up").value, "#2e7d32"], [+$("down").value, "#c62828"]].forEach(function (q) { cx.strokeStyle = q[1]; cx.setLineDash([5, 4]); cx.beginPath(); cx.moveTo(L, sy(q[0])); cx.lineTo(W, sy(q[0])); cx.stroke(); });
+    cx.setLineDash([]); cx.strokeStyle = "#1565c0"; cx.lineWidth = 1.6; cx.beginPath();
+    ang.forEach(function (a, i) { i ? cx.lineTo(sx(i), sy(a)) : cx.moveTo(sx(i), sy(a)); }); cx.stroke();
+    res.marks.forEach(function (i, j) { cx.fillStyle = "#2e7d32"; cx.beginPath(); cx.arc(sx(i), sy(ang[i]), 5, 0, 7); cx.fill(); cx.fillText(j + 1, sx(i) - 3, sy(ang[i]) - 8); });
+    cx.strokeStyle = "#ff6f00"; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(sx(t), 8); cx.lineTo(sx(t), H - B); cx.stroke(); cx.lineWidth = 1;
+    var now = res.marks.filter(function (i) { return i <= t; }).length;
+    $("ang").textContent = Math.round(ang[t]) + "°"; $("st").textContent = res.states[t] === "down" ? "压下" : "撑起";
+    $("cnow").textContent = now; $("call").textContent = res.marks.length; $("call").className = res.marks.length === 5 ? "ok" : "bad";
+  }
+  $("play").onclick = function () {
+    if (timer) { clearInterval(timer); timer = null; this.textContent = "▶ 播放"; return; }
+    this.textContent = "⏸ 暂停"; timer = setInterval(function () { var t = (+$("t").value + 1) % N; $("t").value = t; draw(); }, 1000 / 30);
+  };
+  ["t", "up", "down", "n", "noise"].forEach(function (k) { $(k).oninput = draw; });
+  fetch("data.json").then(function (r) { return r.json(); }).then(function (j) { D = j;
+    for (var i = 0; i < N; i++) { var k = D.kp[i % D.n]; base.push(angle(k[0], k[1], k[2])); }
+    sheet.onload = draw; sheet.src = "img/sheet.jpg"; });
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>
