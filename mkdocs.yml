@@ -53,6 +53,8 @@ nav:
     - "HSV 调色板": sims/hsv-picker/index.md
     - "Canny 双门槛": sims/canny-threshold/index.md
     - "卷积核滑动": sims/conv-kernel/index.md
+    - "CNN 逐层看到了什么": sims/cnn-layers/index.md
+    - "混淆矩阵读图": sims/confusion-matrix/index.md
   - 学习图谱: learning-graph/index.md
   - 常见问题: faq/index.md
   - "在线模拟卷": mock-exam.md

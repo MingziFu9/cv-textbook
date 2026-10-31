@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>混淆矩阵读图</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+table.cm { border-collapse:collapse; font-size:13px; }
+table.cm td, table.cm th { border:1px solid var(--line); width:64px; height:40px; text-align:center; font-variant-numeric:tabular-nums; }
+table.cm td.c { cursor:pointer; }
+table.cm td.sel { outline:3px solid var(--warn); outline-offset:-3px; }
+table.cm th { background:#f5f7fa; font-weight:600; font-size:12px; }
+.thumbs { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.thumbs figure { margin:0; text-align:center; font-size:11px; color:var(--muted); }
+.thumbs img { height:72px; border:1px solid var(--line); border-radius:4px; display:block; }
+.wrap { display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:start; }
+@media (max-width:720px) { .wrap { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<h1>混淆矩阵读图：模型把谁认成了谁</h1>
+<div class="sub">行是真实类别，列是模型的预测。对角线（蓝色）是认对的，其余格子是认错的。点任意一个格子，右边列出这一格里的图片。</div>
+<div class="wrap">
+  <div><table class="cm" id="cm"></table><div class="msg" id="sum"></div></div>
+  <div><div class="msg" id="info">点一个格子看看。</div><div class="thumbs" id="th"></div></div>
+</div>
+<div class="note">数据：编者运行实验 4-3、4-4 的真实结果（yolo26n-cls 在 KITTI 五类小图上训练 10 轮，验证集 199 张），每张小图的把握也是模型实际输出。图片裁自 KITTI 数据集（CC BY-NC-SA 3.0）。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, D, sel = null;
+  var CN = { car: "轿车", cyclist: "骑车人", pedestrian: "行人", truck: "卡车", van: "厢式车" };
+  function draw() {
+    var n = D.names, h = "<tr><th>真实＼预测</th>", max = 0, i, j;
+    n.forEach(function (p) { h += "<th>" + CN[p] + "</th>"; }); h += "<th>认对比例</th></tr>";
+    n.forEach(function (t) { n.forEach(function (p) { max = Math.max(max, D.items.filter(function (x) { return x.t === t && x.p === p; }).length); }); });
+    var right = 0;
+    n.forEach(function (t) {
+      h += "<tr><th>" + CN[t] + "</th>"; var row = 0, ok = 0;
+      n.forEach(function (p) {
+        var c = D.items.filter(function (x) { return x.t === t && x.p === p; }).length; row += c; if (t === p) ok = c;
+        var a = c / max, bg = t === p ? "rgba(63,81,181," + (0.15 + 0.85 * a) + ")" : (c ? "rgba(229,57,53," + (0.15 + 0.85 * a) + ")" : "#fff");
+        h += '<td class="c' + (sel && sel[0] === t && sel[1] === p ? " sel" : "") + '" data-t="' + t + '" data-p="' + p + '" style="background:' + bg + ";color:" + (a > 0.5 ? "#fff" : "inherit") + '">' + c + "</td>";
+      });
+      right += ok; h += "<td>" + Math.round(100 * ok / row) + "%</td></tr>";
+    });
+    $("cm").innerHTML = h;
+    $("sum").innerHTML = "一共 " + D.items.length + " 张，认对 " + right + " 张，准确率 <b>" + (100 * right / D.items.length).toFixed(1) + "%</b>";
+    document.querySelectorAll("td.c").forEach(function (td) { td.onclick = function () { sel = [td.dataset.t, td.dataset.p]; draw(); show(); }; });
+  }
+  function show() {
+    var t = sel[0], p = sel[1], xs = D.items.filter(function (x) { return x.t === t && x.p === p; });
+    xs.sort(function (a, b) { return b.c - a.c; });
+    $("info").innerHTML = t === p ? "真实是<b>" + CN[t] + "</b>、也认成" + CN[p] + "：认对了 " + xs.length + " 张（按把握从大到小，最多显示 24 张）"
+      : "真实是<b>" + CN[t] + "</b>，却被认成<b>" + CN[p] + "</b>：" + xs.length + " 张。看看它们有什么共同点？";
+    $("th").innerHTML = xs.slice(0, 24).map(function (x) { return '<figure><img src="img/' + x.f + '" alt=""><figcaption>' + Math.round(x.c * 100) + "%</figcaption></figure>"; }).join("");
+  }
+  fetch("data.json").then(function (r) { return r.json(); }).then(function (j) { D = j; draw(); });
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

@@ -23,3 +23,5 @@ labs/ch0*/lab*.png
 labs/ch0*/lab*_output/
 labs/ch0*/lab*.mp4
 labs/ch0*/lab*.avi
+labs/ch0*/lab*_crops/
+labs/data/**/*.cache
