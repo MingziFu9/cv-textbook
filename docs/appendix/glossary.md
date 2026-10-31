@@ -13,8 +13,24 @@ description: 本书主要术语的中英文名称、简明定义和例子，按�
 
 | 术语 | 英文 | 定义 | 例子 |
 |---|---|---|---|
-| <span id="g-示例术语"></span>示例术语 | Example Term | 这里是术语表中的定义，鼠标悬停时显示 | 写一个学生熟悉的例子 |
-| <span id="g-另一个术语"></span>另一个术语 | Another Term | 以示例术语为基础的概念 | …… |
+| <span id="g-计算机视觉"></span>计算机视觉 | Computer Vision, CV | 让计算机从图片和视频中“看懂”内容（有什么、在哪里、在做什么）的技术 | 货车摄像头发现车道偏离并报警 |
+| <span id="g-像素"></span>像素 | Pixel | 组成数字图片的最小方格，每个像素只有一种颜色 | 把照片放大后看到的一个个小方块 |
+| <span id="g-分辨率"></span>分辨率 | Resolution | 图片横向和纵向各有多少个像素 | 行车视频画面 1280×720 |
+| <span id="g-RGB"></span>RGB | Red Green Blue | 用红、绿、蓝三个 0～255 的数表示一种颜色的方法 | 黄色是红 255、绿 255、蓝 0 |
+| <span id="g-通道"></span>通道 | Channel | 图片中同一种颜色分量组成的一张数字表，彩色图有 3 个通道 | OpenCV 读入的图片按蓝、绿、红三个通道存放 |
+| <span id="g-灰度图"></span>灰度图 | Grayscale Image | 每个像素只有一个 0～255 的亮度值的图片 | 找车道线前先把彩色画面转成灰度图 |
+| <span id="g-图像分类"></span>图像分类 | Image Classification | 给整张图片一个类别和把握的任务，回答“是什么” | 判断一张小图是轿车还是卡车 |
+| <span id="g-目标检测"></span>目标检测 | Object Detection | 找出图片中有哪些物体、各在什么位置的任务，每个物体用一个框加类别和置信度表示 | 在路口照片中找出 12 个行人和 1 辆车 |
+| <span id="g-图像分割"></span>图像分割 | Image Segmentation | 判断图片中每个像素属于哪个物体或类别，得到精确轮廓的任务 | 把画面中能开的路面一个像素一个像素地标出来 |
+| <span id="g-目标跟踪"></span>目标跟踪 | Object Tracking | 在视频的连续画面中给每个目标编号，并保持同一目标的编号不变的任务 | 给前方每辆车发一个“号码牌”，盯住它的位置变化 |
+| <span id="g-图像生成"></span>图像生成 | Image Generation | 让模型按要求画出一张新图片的任务 | 输入“雨夜的城市路口”生成一张图 |
+| <span id="g-姿态估计"></span>姿态估计 | Pose Estimation | 找出人体关节（关键点）位置的任务，连起来像一个“火柴人” | 找出行人的头、肩、肘、膝等 17 个点 |
+| <span id="g-驾驶自动化分级"></span>驾驶自动化分级 | Driving Automation Levels | 按“谁在开车”把驾驶自动化分为 0～5 级的标准，我国标准为 GB/T 40429—2021 | 0～2 级是驾驶辅助，人始终负责开车 |
+| <span id="g-高级驾驶辅助系统"></span>高级驾驶辅助系统 | Advanced Driver Assistance System, ADAS | 用摄像头、雷达等感知周围情况，提醒或帮助驾驶员的系统，属于驾驶自动化 0～2 级 | 车道偏离报警、前车碰撞报警、自适应巡航 |
+| <span id="g-Notebook"></span>Notebook | Notebook | 网页里的编程环境，代码分成单元格逐个运行，结果直接显示在下面 | 在魔搭社区新建 Notebook 运行实验 1-1 |
+| <span id="g-OpenCV"></span>OpenCV | Open Source Computer Vision Library | 开源的计算机视觉工具库，在 Python 中写作 `cv2`，用于读写、处理图片和视频 | `cv2.imread("a.jpg")` 读入一张图片 |
+| <span id="g-预训练模型"></span>预训练模型 | Pre-trained Model | 别人已经用大量数据训练好、下载后可直接使用或继续训练的模型 | 第一次运行时自动下载的 `yolo26n.pt` |
+| <span id="g-多模态大模型"></span>多模态大模型 | Multimodal Large Model | 能同时理解图片、文字等多种信息的大模型，可以看图回答问题 | 把行车照片发给通义千问，问“前面有几辆车” |
 
 ## 第 2 章 图像处理基础：用 OpenCV 修图
 
