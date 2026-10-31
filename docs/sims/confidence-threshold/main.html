@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>置信度门槛</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+canvas { width:100%; border:1px solid var(--line); border-radius:6px; }
+.stats { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:8px; }
+@media (max-width:600px) { .stats { grid-template-columns:repeat(3, 1fr); } }
+.stat { border:1px solid var(--line); border-radius:6px; padding:4px 6px; text-align:center; }
+.stat b { display:block; font-size:20px; }
+.stat span { font-size:12px; color:var(--muted); }
+.lg span { display:inline-block; width:14px; height:10px; vertical-align:middle; margin:0 4px 0 10px; }
+</style>
+</head>
+<body>
+<h1>置信度门槛：多报还是少报</h1>
+<div class="sub">模型给每个候选框一个置信度，只有高于门槛的框才会显示。虚线框是人工标注的标准答案。拖动门槛，看认对、误检、漏检怎样变化。</div>
+<div class="row ex"><span class="lbl">照片：</span><button data-k="junction" class="on">路口</button><button data-k="crossing">行人过马路</button><button data-k="city">城市街道</button>
+  <span class="lbl" style="margin-left:12px">看：</span><button data-c="all" class="on">车和人</button><button data-c="person">只看人</button><button data-c="car">只看车</button></div>
+<div class="row"><span>置信度门槛</span><input type="range" id="th" min="5" max="95" value="25"><span class="big mono" id="thv"></span></div>
+<canvas id="cv"></canvas>
+<div class="note lg"><span style="border:2px dashed #fff;background:#555"></span>标准答案 <span style="background:#43a047"></span>认对（交并比 ≥ 0.5） <span style="background:#e53935"></span>误检 <span style="background:#ffb300"></span>漏检（标准答案没被找到）</div>
+<div class="stats">
+  <div class="stat"><b id="nk"></b><span>显示的框</span></div>
+  <div class="stat"><b id="tp" class="ok"></b><span>认对 TP</span></div>
+  <div class="stat"><b id="fp" class="bad"></b><span>误检 FP</span></div>
+  <div class="stat"><b id="fn" style="color:#ef6c00"></b><span>漏检 FN</span></div>
+  <div class="stat"><b id="pr"></b><span>精确率 / 召回率</span></div>
+</div>
+<div class="note">数据：yolo26n（COCO 80 类）对三张 KITTI 行车照片的实际检测结果，保留置信度 5% 以上的车（car、bus、truck 合并）和人（person）；标准答案是 KITTI 的人工标注（轿车、厢式车、卡车合并为车，行人、骑车人合并为人）。匹配方法与实验 5-2 相同。照片 CC BY-NC-SA 3.0。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, D, key = "junction", cls = "all", img = new Image(), cv = $("cv"), ctx = cv.getContext("2d");
+  function iou(a, b) { var w = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), h = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = w * h;
+    return i / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i); }
+  function run() {
+    var th = +$("th").value / 100; $("thv").textContent = th.toFixed(2);
+    if (!D || !img.complete) return;
+    var d = D[key], ok = function (c) { return cls === "all" || c === cls; };
+    var truth = d.truth.filter(function (t) { return ok(t[0]); }), kept = d.preds.filter(function (p) { return ok(p[0]) && p[1] >= th; });
+    kept.sort(function (a, b) { return b[1] - a[1]; });
+    var used = {}, res = [];
+    kept.forEach(function (p) { var best = -1, bi = 0;
+      truth.forEach(function (t, i) { if (t[0] === p[0] && !used[i]) { var v = iou(p.slice(2), t.slice(1)); if (v > bi) { bi = v; best = i; } } });
+      if (bi >= 0.5) { used[best] = 1; res.push([p, true]); } else res.push([p, false]); });
+    cv.width = d.w; cv.height = d.h; ctx.drawImage(img, 0, 0);
+    ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    truth.forEach(function (t, i) { ctx.strokeStyle = used[i] ? "rgba(255,255,255,.9)" : "#ffb300"; ctx.lineWidth = used[i] ? 2 : 4; ctx.strokeRect(t[1], t[2], t[3] - t[1], t[4] - t[2]); });
+    ctx.setLineDash([]); ctx.font = "bold 14px sans-serif";
+    res.forEach(function (r) { var p = r[0], c = r[1] ? "#43a047" : "#e53935"; ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.strokeRect(p[2], p[3], p[4] - p[2], p[5] - p[3]);
+      var label = (p[0] === "car" ? "车 " : "人 ") + Math.round(p[1] * 100) + "%"; ctx.fillStyle = c; ctx.fillRect(p[2], p[3] - 17, ctx.measureText(label).width + 6, 17); ctx.fillStyle = "#fff"; ctx.fillText(label, p[2] + 3, p[3] - 4); });
+    var tp = Object.keys(used).length, fp = kept.length - tp, fn = truth.length - tp;
+    $("nk").textContent = kept.length; $("tp").textContent = tp; $("fp").textContent = fp; $("fn").textContent = fn;
+    $("pr").textContent = (kept.length ? Math.round(100 * tp / kept.length) : 0) + "% / " + (truth.length ? Math.round(100 * tp / truth.length) : 0) + "%";
+  }
+  function load() { img.onload = run; img.src = "img/" + key + ".jpg"; }
+  $("th").oninput = run;
+  document.querySelectorAll("[data-k]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-k]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); key = b.dataset.k; load(); }; });
+  document.querySelectorAll("[data-c]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-c]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); cls = b.dataset.c; run(); }; });
+  fetch("data.json").then(function (r) { return r.json(); }).then(function (j) { D = j; load(); });
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

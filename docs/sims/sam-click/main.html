@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>点一下分割</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+canvas { width:100%; border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+#info { min-height:1.6em; }
+</style>
+</head>
+<body>
+<h1>点一下分割：SAM 的“点选”</h1>
+<div class="sub">在照片上点一下，被点中的那一块就会亮起来。可以点车、路面、天空、护栏……SAM 不管它叫什么，只管“这是完整的一块”。</div>
+<div class="row ex"><span class="lbl">照片：</span><button data-k="highway" class="on">高速公路</button><button data-k="city">城市街道</button>
+  <span class="lbl" style="margin-left:12px">点击方式：</span><button data-m="one" class="on">每次选一块</button><button data-m="add">累加多块</button>
+  <button id="all" style="margin-left:12px">显示全部区域</button><button id="clr">清空</button></div>
+<canvas id="cv"></canvas>
+<div class="msg" id="info">点一下画面试试</div>
+<div class="note">数据：编者用 MobileSAM 对照片做“分割一切”（不给任何提示，让模型自己找出所有完整的块），得到的区域预先存好；你点到哪个像素，就亮出包含它的最小区域，效果接近实验 6-3 中给 SAM 一个点。照片：高速公路来自 Udacity 行车视频（MIT），城市街道来自 KITTI（CC BY-NC-SA 3.0）。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, D, key = "highway", mode = "one", showAll = false, sel = [], pts = [];
+  var cv = $("cv"), ctx = cv.getContext("2d"), photo = new Image(), labI = new Image(), lab;
+  var IC = [[230,25,75],[60,180,75],[255,225,25],[0,130,200],[245,130,48],[145,30,180],[70,240,240],[240,50,230],[210,245,60],[250,190,212],[0,128,128],[170,110,40]];
+  function draw() {
+    if (!lab) return; var d = D[key]; cv.width = d.w; cv.height = d.h; ctx.drawImage(photo, 0, 0);
+    var px = ctx.getImageData(0, 0, d.w, d.h), p = px.data;
+    for (var i = 0; i < d.w * d.h; i++) {
+      var id = lab[i * 4] + lab[i * 4 + 1] * 256, k = sel.indexOf(id), c = null, a = 0.55;
+      if (id && k >= 0) c = [30, 144, 255];
+      else if (showAll && id) { c = IC[id % IC.length]; a = 0.45; }
+      else if (sel.length) { p[i*4] *= 0.55; p[i*4+1] *= 0.55; p[i*4+2] *= 0.55; continue; }
+      if (c) for (var j = 0; j < 3; j++) p[i*4+j] = p[i*4+j] * (1 - a) + c[j] * a;
+    }
+    ctx.putImageData(px, 0, 0);
+    pts.forEach(function (q) { ctx.beginPath(); ctx.arc(q[0], q[1], 7, 0, 7); ctx.fillStyle = "#e53935"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke(); });
+  }
+  cv.onclick = function (e) {
+    if (!lab) return; var d = D[key], r = cv.getBoundingClientRect();
+    var x = Math.floor((e.clientX - r.left) / r.width * d.w), y = Math.floor((e.clientY - r.top) / r.height * d.h), i = y * d.w + x;
+    var id = lab[i * 4] + lab[i * 4 + 1] * 256;
+    if (mode === "one") { sel = []; pts = []; }
+    pts.push([x, y]);
+    if (!id) { $("info").textContent = "点 (" + x + ", " + y + ")：这里没有分出完整的块（SAM 也会有分不出来的地方）"; draw(); return; }
+    if (sel.indexOf(id) < 0) sel.push(id);
+    var total = sel.reduce(function (s, k) { return s + d.area[k - 1]; }, 0);
+    $("info").textContent = "点 (" + x + ", " + y + ")：选中第 " + id + " 块，占画面 " + d.area[id - 1].toFixed(1) + "%" + (sel.length > 1 ? "；已选 " + sel.length + " 块，合计约 " + total.toFixed(1) + "%" : "");
+    draw();
+  };
+  function load() {
+    lab = null; sel = []; pts = []; var n = 0;
+    photo.onload = labI.onload = function () { if (++n === 2) { var c = document.createElement("canvas"); c.width = labI.width; c.height = labI.height; var x = c.getContext("2d"); x.drawImage(labI, 0, 0); lab = x.getImageData(0, 0, c.width, c.height).data; draw();
+      $("info").textContent = "这张照片被 SAM 分成了 " + D[key].n + " 块，点一下画面试试"; } };
+    photo.src = "img/" + key + ".jpg"; labI.src = "img/" + key + "_lab.png";
+  }
+  $("all").onclick = function () { showAll = !showAll; this.classList.toggle("on", showAll); draw(); };
+  $("clr").onclick = function () { sel = []; pts = []; $("info").textContent = "已清空"; draw(); };
+  document.querySelectorAll("[data-k]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-k]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); key = b.dataset.k; load(); }; });
+  document.querySelectorAll("[data-m]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-m]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); mode = b.dataset.m; }; });
+  fetch("data.json").then(function (r) { return r.json(); }).then(function (j) { D = j; load(); });
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

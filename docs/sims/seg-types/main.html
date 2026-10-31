@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三种分割对比</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+canvas { width:100%; border:1px solid var(--line); border-radius:6px; cursor:crosshair; }
+.lg { font-size:13px; line-height:1.9; }
+.lg span.c { display:inline-block; width:14px; height:10px; vertical-align:middle; margin:0 3px 0 10px; border-radius:2px; }
+#info { min-height:1.6em; }
+</style>
+</head>
+<body>
+<h1>三种分割：语义、实例、全景</h1>
+<div class="sub">同一张行车照片，三种分割给出的“答案”不同。切换模式，把鼠标移到画面上，看每个像素被分成了什么。</div>
+<div class="row ex"><span class="lbl">照片：</span><button data-k="city" class="on">城市街道</button><button data-k="crossing">行人过马路</button></div>
+<div class="row ex"><span class="lbl">模式：</span><button data-m="photo">原图</button><button data-m="sem" class="on">语义分割</button><button data-m="inst">实例分割</button><button data-m="pan">全景分割</button>
+  <span class="lbl" style="margin-left:12px">透明度</span><input type="range" id="op" min="0" max="100" value="60"></div>
+<canvas id="cv"></canvas>
+<div class="msg" id="info">把鼠标移到画面上</div>
+<div class="note" id="desc"></div>
+<div class="lg" id="lg"></div>
+<div class="note">数据：语义分割用 yolo26n-sem（道路场景 19 类），实例分割用 yolo26n-seg（COCO 80 类，只保留人和各种车，置信度 ≥ 0.3）；全景分割由编者把两者合并得到：人和车用实例结果，其余用语义结果。照片来自 KITTI，CC BY-NC-SA 3.0。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, D, key = "city", mode = "sem";
+  var cv = $("cv"), ctx = cv.getContext("2d"), photo = new Image(), semI = new Image(), insI = new Image(), sem, ins, base;
+  var PAL = [[128,64,128],[244,35,232],[70,70,70],[102,102,156],[190,153,153],[153,153,153],[250,170,30],[220,220,0],[107,142,35],[152,251,152],[70,130,180],[220,20,60],[255,0,0],[0,0,142],[0,0,70],[0,60,100],[0,80,100],[0,0,230],[119,11,32]];
+  var IC = [[230,25,75],[60,180,75],[255,225,25],[0,130,200],[245,130,48],[145,30,180],[70,240,240],[240,50,230],[210,245,60],[250,190,212],[0,128,128],[170,110,40],[128,0,0],[170,255,195],[128,128,0]];
+  var DESC = {
+    photo: "原图：还没有分割。",
+    sem: "语义分割：每个像素一个类别。所有的车都是同一种深蓝色，挨在一起的几辆车分不清哪辆是哪辆；但路面、天空、植被这些“没有固定形状”的东西也都有类别。",
+    inst: "实例分割：只管能数得清的物体（人、车），每一个都单独一种颜色，挨在一起也能分开；路面、天空等没有被分割（灰色）。",
+    pan: "全景分割：两者合在一起。每个像素既有类别，人和车又能区分是第几个，画面没有空白。"
+  };
+  function grab(im) { var c = document.createElement("canvas"); c.width = im.width; c.height = im.height; var x = c.getContext("2d"); x.drawImage(im, 0, 0); return x.getImageData(0, 0, im.width, im.height).data; }
+  function color(i) {
+    var s = sem[i * 4], k = ins[i * 4];
+    if (mode === "sem") return PAL[s];
+    if (mode === "inst") return k ? IC[(k - 1) % IC.length] : null;
+    if (mode === "pan") return k ? IC[(k - 1) % IC.length] : PAL[s];
+    return null;
+  }
+  function draw() {
+    if (!D || !sem) return;
+    var d = D.imgs[key], a = +$("op").value / 100; cv.width = d.w; cv.height = d.h;
+    ctx.drawImage(photo, 0, 0); var px = ctx.getImageData(0, 0, d.w, d.h), p = px.data;
+    for (var i = 0; i < d.w * d.h; i++) {
+      var c = color(i);
+      if (!c) { if (mode === "inst") { var g = (p[i*4] + p[i*4+1] + p[i*4+2]) / 3 * 0.6; p[i*4] = p[i*4+1] = p[i*4+2] = g; } continue; }
+      for (var j = 0; j < 3; j++) p[i*4+j] = p[i*4+j] * (1 - a) + c[j] * a;
+    }
+    ctx.putImageData(px, 0, 0); base = px;
+    $("desc").textContent = DESC[mode]; legend();
+  }
+  function legend() {
+    var d = D.imgs[key], h = "";
+    if (mode === "sem" || mode === "pan") { var seen = {}; for (var i = 0; i < d.w * d.h; i += 7) seen[sem[i * 4]] = 1;
+      Object.keys(seen).sort(function (a, b) { return a - b; }).forEach(function (s) { var c = PAL[s]; h += '<span class="c" style="background:rgb(' + c + ')"></span>' + D.names[s]; }); }
+    if (mode === "inst" || mode === "pan") { h += (h ? "<br>" : "") + "实例 " + d.inst.length + " 个：";
+      d.inst.forEach(function (t, i) { var c = IC[i % IC.length]; h += '<span class="c" style="background:rgb(' + c + ')"></span>' + t[0] + (i + 1); }); }
+    $("lg").innerHTML = h;
+  }
+  cv.onmousemove = function (e) {
+    if (!sem) return; var d = D.imgs[key], r = cv.getBoundingClientRect();
+    var x = Math.floor((e.clientX - r.left) / r.width * d.w), y = Math.floor((e.clientY - r.top) / r.height * d.h), i = y * d.w + x;
+    var s = sem[i * 4], k = ins[i * 4], t = "像素 (" + x + ", " + y + ")　";
+    if (mode === "photo") t += "原图没有类别";
+    else if (mode === "sem") t += "语义：" + D.names[s];
+    else if (mode === "inst") t += k ? "实例：" + D.imgs[key].inst[k - 1][0] + k + "（置信度 " + D.imgs[key].inst[k - 1][1] + "）" : "不属于任何实例";
+    else t += k ? "全景：" + D.imgs[key].inst[k - 1][0] + k : "全景：" + D.names[s];
+    $("info").textContent = t;
+  };
+  function load() {
+    sem = null; var n = 0, done = function () { if (++n === 3) { sem = grab(semI); ins = grab(insI); draw(); } };
+    photo.onload = semI.onload = insI.onload = done;
+    photo.src = "img/" + key + ".jpg"; semI.src = "img/" + key + "_sem.png"; insI.src = "img/" + key + "_inst.png";
+  }
+  $("op").oninput = draw;
+  document.querySelectorAll("[data-k]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-k]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); key = b.dataset.k; load(); }; });
+  document.querySelectorAll("[data-m]").forEach(function (b) { b.onclick = function () { document.querySelectorAll("[data-m]").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); mode = b.dataset.m; draw(); }; });
+  fetch("data.json").then(function (r) { return r.json(); }).then(function (j) { D = j; load(); });
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

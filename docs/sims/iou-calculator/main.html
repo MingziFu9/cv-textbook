@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IoU 计算器</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+canvas { width:100%; border:1px solid var(--line); border-radius:6px; touch-action:none; cursor:move; }
+.calc { font-size:13.5px; background:#f5f7fa; border-radius:6px; padding:8px 10px; margin-top:8px; line-height:1.9; }
+.meter { height:16px; background:#eceff1; border-radius:8px; overflow:hidden; margin-top:4px; }
+.meter div { height:100%; transition:width .15s; }
+</style>
+</head>
+<body>
+<h1>IoU 计算器：两个框重叠了多少</h1>
+<div class="sub">白色虚线框是人工标注的“标准答案”，彩色框是模型的检测框。拖动彩色框移动，拖它的右下角改变大小，看交集、并集和交并比（IoU）怎样变化。</div>
+<div class="row ex"><span class="lbl">试试：</span><button data-p="0">几乎重合</button><button data-p="1">偏了一点</button><button data-p="2">框太大</button><button data-p="3">只套住一半</button><button data-p="4">完全没碰到</button></div>
+<canvas id="cv"></canvas>
+<div class="calc" id="calc"></div>
+<div class="meter"><div id="bar"></div></div>
+<div class="note">照片是 KITTI 数据集中的路口（CC BY-NC-SA 3.0），白色虚线框是这辆车的人工标注 (602, 183)～(675, 243)。坐标单位是像素，计算方法与实验 5-2 的 iou 函数相同。</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, cv = $("cv"), ctx = cv.getContext("2d"), img = new Image();
+  var X0 = 520, Y0 = 130, VW = 240, VH = 150, S = 4;              // 显示照片中的一块，放大 4 倍
+  var G = [602, 183, 675, 243], P = [608, 188, 680, 246], drag = null;
+  var PRE = [[604, 184, 676, 244], [618, 192, 690, 250], [585, 165, 700, 262], [602, 183, 640, 243], [690, 170, 740, 220]];
+  function iou(a, b) { var w = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), h = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+    return [w, h, w * h, (a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1])]; }
+  function sx(x) { return (x - X0) * S; } function sy(y) { return (y - Y0) * S; }
+  function draw() {
+    cv.width = VW * S; cv.height = VH * S; ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, X0, Y0, VW, VH, 0, 0, VW * S, VH * S);
+    var r = iou(G, P), inter = r[2], ua = r[3] + r[4] - inter, v = inter / ua;
+    if (inter > 0) { ctx.fillStyle = "rgba(255,193,7,.45)"; ctx.fillRect(sx(Math.max(G[0], P[0])), sy(Math.max(G[1], P[1])), r[0] * S, r[1] * S); }
+    ctx.setLineDash([10, 6]); ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.strokeRect(sx(G[0]), sy(G[1]), (G[2] - G[0]) * S, (G[3] - G[1]) * S);
+    ctx.setLineDash([]); var col = v >= 0.5 ? "#43a047" : "#e53935"; ctx.strokeStyle = col; ctx.lineWidth = 4;
+    ctx.strokeRect(sx(P[0]), sy(P[1]), (P[2] - P[0]) * S, (P[3] - P[1]) * S);
+    ctx.fillStyle = col; ctx.fillRect(sx(P[2]) - 12, sy(P[3]) - 12, 16, 16);
+    $("calc").innerHTML = "标准答案：(" + G.join(", ") + ")，面积 " + (G[2] - G[0]) + " × " + (G[3] - G[1]) + " = <b>" + r[3] + "</b><br>"
+      + "检测框：(" + P.join(", ") + ")，面积 " + (P[2] - P[0]) + " × " + (P[3] - P[1]) + " = <b>" + r[4] + "</b><br>"
+      + "交集（黄色）：" + r[0] + " × " + r[1] + " = <b>" + inter + "</b>　并集 = " + r[3] + " + " + r[4] + " − " + inter + " = <b>" + ua + "</b><br>"
+      + "交并比 IoU = " + inter + " ÷ " + ua + " = <b style='font-size:18px;color:" + col + "'>" + v.toFixed(3) + "</b>　" + (v >= 0.5 ? "≥ 0.5，按 mAP50 的标准算<b>认对</b>" : "< 0.5，按 mAP50 的标准<b>不算认对</b>");
+    $("bar").style.width = (v * 100) + "%"; $("bar").style.background = col;
+  }
+  function pos(e) { var b = cv.getBoundingClientRect(); return [X0 + (e.clientX - b.left) / b.width * VW, Y0 + (e.clientY - b.top) / b.height * VH]; }
+  cv.addEventListener("pointerdown", function (e) { var p = pos(e);
+    if (Math.abs(p[0] - P[2]) < 5 && Math.abs(p[1] - P[3]) < 5) drag = ["size"];
+    else if (p[0] > P[0] && p[0] < P[2] && p[1] > P[1] && p[1] < P[3]) drag = ["move", p[0] - P[0], p[1] - P[1]];
+    cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", function (e) { if (!drag) return; var p = pos(e), w = P[2] - P[0], h = P[3] - P[1];
+    if (drag[0] === "size") { P[2] = Math.max(P[0] + 6, Math.round(p[0])); P[3] = Math.max(P[1] + 6, Math.round(p[1])); }
+    else { P[0] = Math.round(p[0] - drag[1]); P[1] = Math.round(p[1] - drag[2]); P[2] = P[0] + w; P[3] = P[1] + h; }
+    draw(); });
+  cv.addEventListener("pointerup", function () { drag = null; });
+  document.querySelectorAll("[data-p]").forEach(function (b) { b.onclick = function () { P = PRE[+b.dataset.p].slice(); draw(); }; });
+  img.onload = draw; img.src = "img/junction.jpg";
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

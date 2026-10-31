@@ -64,7 +64,7 @@ def make_detection():
             (out / "labels" / split / t.name).write_text("\n".join(rows) + "\n")
     names = "\n".join(f"  {i}: {n}" for i, n in enumerate(DET_NAMES))
     (out / "kitti_small.yaml").write_text(
-        f"# KITTI 小样本（CC BY-NC-SA 3.0），由 get_kitti_small.py 生成\npath: {out.resolve()}\n"
+        "# KITTI 小样本（CC BY-NC-SA 3.0），由 get_kitti_small.py 生成\n# 不写 path：Ultralytics 会以本文件所在的文件夹为数据集根目录\n"
         f"train: images/train\nval: images/val\nnames:\n{names}\n", encoding="utf-8")
     print("检测数据：", out, "训练 400 张，验证 100 张")
 

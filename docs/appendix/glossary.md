@@ -102,11 +102,39 @@ description: 本书主要术语的中英文名称、简明定义和例子，按�
 
 | 术语 | 英文 | 定义 | 例子 |
 |---|---|---|---|
+| <span id="g-边界框"></span>边界框 | Bounding Box | 框住一个物体的最小矩形，常用左上角和右下角坐标表示 | 行人框 (888,184)-(950,319) |
+| <span id="g-交并比"></span>交并比 | Intersection over Union, IoU | 两个框重叠部分的面积除以两个框合起来的面积，取值 0～1，衡量两个框有多吻合 | 预测框比真实框大一圈时 IoU 约 0.39 |
+| <span id="g-非极大值抑制"></span>非极大值抑制 | Non-Maximum Suppression, NMS | 对同一物体的多个重叠框，只保留置信度最高的一个、删掉与它交并比过高的其余框的去重方法 | 同一辆车上的 3 个框只留 0.89 那个 |
+| <span id="g-两阶段检测器"></span>两阶段检测器 | Two-stage Detector | 先找出可能有物体的候选区域，再对每个区域分类和修正框的检测器 | Faster R-CNN |
+| <span id="g-一阶段检测器"></span>一阶段检测器 | One-stage Detector | 看一遍整张图就直接输出所有框和类别的检测器，速度快 | YOLO 系列 |
+| <span id="g-置信度门槛"></span>置信度门槛 | Confidence Threshold | 只保留置信度不低于这个值的检测框；调高少误检，调低少漏检 | 门槛 0.25 时留下 8 个框，0.5 时只剩 3 个 |
+| <span id="g-误检"></span>误检 | False Positive | 把不是目标的东西报成了目标，或框的位置对不上 | 门槛 0.10 时报出 18 个框，其中 11 个是误检 |
+| <span id="g-漏检"></span>漏检 | False Negative | 真实存在的目标没有被检测出来 | 门槛 0.50 时 9 个真实物体漏检了 6 个 |
+| <span id="g-精确率"></span>精确率 | Precision | 预测为某类的样本中，真正属于该类的比例（判得准不准） | 报出的 8 个框中 5 个是对的，精确率 62% |
+| <span id="g-召回率"></span>召回率 | Recall | 某类的全部样本中，被正确找出来的比例（找得全不全） | 9 个真实物体找出 5 个，召回率 56% |
+| <span id="g-平均精度"></span>平均精度 | Average Precision, AP / mAP | 把门槛从高到低滑一遍得到的精确率-召回率曲线下的面积；各类别 AP 的平均叫 mAP | mAP50 表示以交并比 0.5 为标准算出的 mAP |
+| <span id="g-数据配置文件"></span>数据配置文件 | Dataset YAML | 告诉 YOLO 训练集、验证集图片在哪里以及类别名称的 YAML 文本文件 | kitti_small.yaml 中的 train、val、names |
+| <span id="g-标注工具"></span>标注工具 | Annotation Tool | 在图片上画框、选类别并导出标注文件的软件 | X-AnyLabeling、Label Studio |
+| <span id="g-开放词汇检测"></span>开放词汇检测 | Open-vocabulary Detection | 用户输入类别名称的文字，模型就能检测这些类别，无需专门训练的检测方法 | YOLO-World 输入 traffic cone 就能框出锥桶 |
 
 ## 第 6 章 图像分割：精确到每个像素
 
 | 术语 | 英文 | 定义 | 例子 |
 |---|---|---|---|
+| <span id="g-语义分割"></span>语义分割 | Semantic Segmentation | 给图片中每个像素一个类别，不区分同类中的第几个 | 把行车照片的像素分成路面、人行道、轿车、天空等 19 类 |
+| <span id="g-实例分割"></span>实例分割 | Instance Segmentation | 找出每个可数的物体，并给每个物体单独一张掩膜 | 4 个人、1 辆公交车各一张掩膜 |
+| <span id="g-全景分割"></span>全景分割 | Panoptic Segmentation | 每个像素既有类别，人、车等物体还能区分是第几个，相当于语义分割加实例分割 | 路面、天空有类别，车 1、车 2 分得开 |
+| <span id="g-羽化"></span>羽化 | Feathering | 把掩膜边缘从 0/1 的硬边模糊成逐渐过渡的值，让抠图边缘更自然 | 用 7×7 高斯滤波羽化人物掩膜 |
+| <span id="g-多边形标注"></span>多边形标注 | Polygon Annotation | 沿物体轮廓点一圈点、连成多边形的分割标注方式 | YOLO 分割标注：类别编号后跟各顶点的比例坐标 |
+| <span id="g-编码器-解码器"></span>编码器-解码器 | Encoder-Decoder | 编码器负责理解并压缩输入，解码器负责逐步还原出输出的网络结构 | U-Net 先把图缩小到 1/8，再放大回原图大小 |
+| <span id="g-平均交并比"></span>平均交并比 | Mean IoU, mIoU | 语义分割中每个类别分别算交并比，再取平均 | 路面、天空、轿车……各算一个交并比后平均 |
+| <span id="g-分割一切模型"></span>分割一切模型 | Segment Anything Model, SAM | 根据点、框等提示分割任意物体、不需要专门训练的基础模型，只给掩膜不给类别 | 实验 6-3 用 MobileSAM 点一下分出整辆车 |
+| <span id="g-提示"></span>提示 | Prompt | 告诉模型要做什么的输入；在 SAM 中是点、框等，用来指明要分割哪个物体 | points=[[1180, 500]], labels=[1] |
+| <span id="g-深度估计"></span>深度估计 | Depth Estimation | 估计图片中每个像素离相机有多远的任务 | 城市街道照片中最近约 5.4 米、最远约 86.6 米 |
+| <span id="g-深度图"></span>深度图 | Depth Map | 和原图一样大、每个像素存一个距离值的数字表，常用颜色表示远近 | 近处红、远处蓝 |
+| <span id="g-单目深度估计"></span>单目深度估计 | Monocular Depth Estimation | 只用一个摄像头拍的单张照片估计深度，便宜但没有绝对尺子 | yolo26n-depth 估计最近的车约 6.5 米 |
+| <span id="g-场景重建"></span>场景重建 | Scene Reconstruction | 根据照片或视频恢复场景的三维结构 | 用手机绕物体拍一圈照片，生成三维模型 |
+| <span id="g-布尔索引"></span>布尔索引 | Boolean Indexing | 用 True/False 表放进方括号，只挑出 True 位置的元素 | show[road] = (0, 200, 0) 只把路面涂绿 |
 
 ## 第 7 章 视频分析：让模型看懂动态画面
 
