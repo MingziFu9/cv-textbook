@@ -52,3 +52,57 @@ lesson_plan:
   online_ratio: 0.5                   # 线上学时占比（开放大学以线上为主，按实际改）
   teacher: ""                         # 授课教师，留空则教案上留出填写位置
   school: ""                          # 学校名称，留空则不显示
+
+# 首页“先玩一玩”轮播：按轮播顺序写，第 1 个放画面最震撼的。sim 是 docs/sims/ 下的目录名，hook 是一句问句，play 是一句玩法；
+# steps 是录短视频时自动做的操作（写法见 编写规范.md“首页轮播”）。改完运行 python tools/showcase.py record 重录视频。
+showcase_tagline: "让机器看懂照片和视频，从像素到大模型"
+showcase:
+  - sim: sam-click
+    hook: "在照片上点一下，整辆车就被抠出来"
+    play: "天空、路面、车辆，点哪块亮哪块。"
+    steps:
+      - ["click", "累加多块", {"hold": 0.3}]
+      - ["at", "#cv", 0.7, 0.61, {"hold": 0.9}]
+      - ["at", "#cv", 0.95, 0.7, {"hold": 0.9}]
+      - ["at", "#cv", 0.36, 0.82, {"hold": 0.9}]
+      - ["at", "#cv", 0.3, 0.22, {"hold": 1.4}]
+      - ["poster"]
+      - ["click", "清空", {"hold": 0.6}]
+  - sim: seg-types
+    hook: "同一条街，三种分割各看出了什么"
+    play: "语义、实例、全景分割一键切换。"
+    steps:
+      - ["click", "语义分割", {"hold": 1}]
+      - ["click", "实例分割", {"hold": 1}]
+      - ["click", "全景分割", {"hold": 1.2}]
+      - ["poster"]
+      - ["click", "行人过马路", {"hold": 1}]
+      - ["slide", "#op", 95, {"hold": 1}]
+  - sim: sr-compare
+    hook: "模糊小图放大 4 倍，AI 补出了细节"
+    play: "左右拖动分界线，对比插值和超分辨率。"
+    steps:
+      - ["draw", "#stage", [[0.5, 0.55], [0.12, 0.55], [0.88, 0.55], [0.5, 0.55]], {"seg": 0.9, "hold": 0.6}]
+      - ["click", "超分辨率", {"hold": 0.4}]
+      - ["click", "最近邻", {"nth": 1, "hold": 0.4}]
+      - ["draw", "#stage", [[0.5, 0.55], [0.2, 0.55], [0.8, 0.55]], {"seg": 0.9, "hold": 0.6}]
+      - ["poster"]
+      - ["click", "行人过马路", {"hold": 0.4}]
+      - ["draw", "#stage", [[0.8, 0.55], [0.3, 0.55]], {"seg": 0.9, "hold": 1}]
+  - sim: cnn-layers
+    hook: "一张车的照片，在网络里一层层变成了什么"
+    play: "从边缘到形状，再到“厢式车”。"
+    steps:
+      - ["click", {"role": "button", "name": "第 0 层", "exact": false}, {"hold": 0.8}]
+      - ["click", {"role": "button", "name": "第 2 层", "exact": false}, {"hold": 0.8}]
+      - ["click", {"role": "button", "name": "第 4 层", "exact": false}, {"hold": 0.8}]
+      - ["poster"]
+      - ["click", {"role": "button", "name": "第 8 层", "exact": false}, {"hold": 0.8}]
+      - ["click", "行人", {"hold": 1}]
+      - ["click", {"role": "button", "name": "输出 1000 类", "exact": false}, {"hold": 1}]
+  - sim: action-timeline
+    hook: "AI 怎样数清你做了几个俯卧撑？"
+    play: "关节角度曲线和视频画面同步播放。"
+    steps:
+      - ["click", "▶ 播放", {"hold": 5}]
+      - ["poster"]

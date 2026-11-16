@@ -9,6 +9,22 @@
     4 学分 · 72 学时（理论 36 学时 + 实验 36 学时） · 第 4 学期 · 9 章 · 36 个实验 · 期末开卷
 <!-- course:end -->
 
+<!-- showcase:start -->
+## 先玩一玩
+
+<p class="sc-tagline">让机器看懂照片和视频，从像素到大模型</p>
+
+<div class="showcase" aria-label="精选交互动画">
+<ol class="sc-list">
+<li data-sim="sims/sam-click/main.html" data-video="assets/showcase/sam-click" data-title="点一下分割" data-play="天空、路面、车辆，点哪块亮哪块。"><img src="assets/showcase/sam-click.jpg" alt="点一下分割截图" loading="lazy"><p class="sc-hook">在照片上点一下，整辆车就被抠出来</p><p><b>点一下分割</b>　天空、路面、车辆，点哪块亮哪块。</p><p><a href="sims/sam-click/main.html">打开动画</a>　<a class="sc-chap" href="chapters/06-segmentation/" title="第 6 章 图像分割：精确到每个像素">去读第6章 →</a></p></li>
+<li data-sim="sims/seg-types/main.html" data-video="assets/showcase/seg-types" data-title="三种分割对比" data-play="语义、实例、全景分割一键切换。"><img src="assets/showcase/seg-types.jpg" alt="三种分割对比截图" loading="lazy"><p class="sc-hook">同一条街，三种分割各看出了什么</p><p><b>三种分割对比</b>　语义、实例、全景分割一键切换。</p><p><a href="sims/seg-types/main.html">打开动画</a>　<a class="sc-chap" href="chapters/06-segmentation/" title="第 6 章 图像分割：精确到每个像素">去读第6章 →</a></p></li>
+<li data-sim="sims/sr-compare/main.html" data-video="assets/showcase/sr-compare" data-title="放大对比滑块" data-play="左右拖动分界线，对比插值和超分辨率。"><img src="assets/showcase/sr-compare.jpg" alt="放大对比滑块截图" loading="lazy"><p class="sc-hook">模糊小图放大 4 倍，AI 补出了细节</p><p><b>放大对比滑块</b>　左右拖动分界线，对比插值和超分辨率。</p><p><a href="sims/sr-compare/main.html">打开动画</a>　<a class="sc-chap" href="chapters/08-generative/" title="第 8 章 生成式视觉：Stable Diffusion 与图像修复">去读第8章 →</a></p></li>
+<li data-sim="sims/cnn-layers/main.html" data-video="assets/showcase/cnn-layers" data-title="CNN 逐层看到了什么" data-play="从边缘到形状，再到“厢式车”。"><img src="assets/showcase/cnn-layers.jpg" alt="CNN 逐层看到了什么截图" loading="lazy"><p class="sc-hook">一张车的照片，在网络里一层层变成了什么</p><p><b>CNN 逐层看到了什么</b>　从边缘到形状，再到“厢式车”。</p><p><a href="sims/cnn-layers/main.html">打开动画</a>　<a class="sc-chap" href="chapters/04-classification/" title="第 4 章 图像分类：让模型认出图片">去读第4章 →</a></p></li>
+<li data-sim="sims/action-timeline/main.html" data-video="assets/showcase/action-timeline" data-title="动作是一段时间" data-play="关节角度曲线和视频画面同步播放。"><img src="assets/showcase/action-timeline.jpg" alt="动作是一段时间截图" loading="lazy"><p class="sc-hook">AI 怎样数清你做了几个俯卧撑？</p><p><b>动作是一段时间</b>　关节角度曲线和视频画面同步播放。</p><p><a href="sims/action-timeline/main.html">打开动画</a>　<a class="sc-chap" href="chapters/07-video/" title="第 7 章 视频分析：让模型看懂动态画面">去读第7章 →</a></p></li>
+</ol>
+</div>
+<!-- showcase:end -->
+
 ## 这本书讲什么
 
 计算机视觉让计算机“看懂”图片和视频：手机刷脸解锁、停车场自动识别车牌、汽车的车道偏离提醒、相册自动按人物分类、拍照搜题，背后都是它。今天的视觉程序大多不是一条条规则写出来的，而是用大量图片训练出来的模型；而且很多好用的模型已经开源，下载下来几行代码就能用。
